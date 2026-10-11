@@ -1,0 +1,35 @@
+{
+  "type": "agent-activity-feed",
+  "activities": [
+    {
+      "content": "content 1",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 1,
+      "type": "message"
+    },
+    {
+      "content": "content 2",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 2,
+      "type": "message"
+    },
+    {
+      "content": "content 3",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 3,
+      "type": "message"
+    }
+  ],
+  "className": "className",
+  "emptyDescription": "emptyDescription",
+  "emptyTitle": "emptyTitle",
+  "enter": "none",
+  "enterDelay": 1,
+  "followLatest": true,
+  "onJump": false,
+  "skeleton": "header",
+  "working": false
+}

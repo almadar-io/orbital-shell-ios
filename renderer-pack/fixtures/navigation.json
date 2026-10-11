@@ -1,0 +1,70 @@
+{
+  "type": "navigation",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "isLoading": false,
+  "items": [
+    {
+      "badge": "badge 1",
+      "disabled": false,
+      "href": "href 1",
+      "icon": "star",
+      "id": "id 1",
+      "isActive": false,
+      "label": "label 1",
+      "onClick": false,
+      "subMenu": [
+        {},
+        {},
+        {}
+      ]
+    },
+    {
+      "badge": "badge 2",
+      "disabled": false,
+      "href": "href 2",
+      "icon": "bell",
+      "id": "id 2",
+      "isActive": false,
+      "label": "label 2",
+      "onClick": false,
+      "subMenu": [
+        {},
+        {},
+        {}
+      ]
+    },
+    {
+      "badge": "badge 3",
+      "disabled": false,
+      "href": "href 3",
+      "icon": "heart",
+      "id": "id 3",
+      "isActive": false,
+      "label": "label 3",
+      "onClick": false,
+      "subMenu": [
+        {},
+        {},
+        {}
+      ]
+    }
+  ],
+  "lang": "lang",
+  "orientation": "horizontal",
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1
+}

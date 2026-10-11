@@ -1,0 +1,76 @@
+{
+  "type": "import-preview-tree",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "cancelLabel": "Cancel",
+  "className": "className",
+  "confirmLabel": "Confirm import",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "entityDisplay": {
+    "Project": {
+      "singular": "Project",
+      "plural": "Projects"
+    },
+    "Task": {
+      "singular": "Task",
+      "plural": "Tasks"
+    }
+  },
+  "indent": 16,
+  "lang": "lang",
+  "onCancel": "IMPORT_CANCEL",
+  "onConfirm": "IMPORT_CONFIRM",
+  "role": "alert",
+  "skeleton": "header",
+  "skipped": [
+    {
+      "ref": "s1",
+      "reason": "Unsupported attachment type"
+    }
+  ],
+  "surface": "auto",
+  "tabIndex": -1,
+  "units": [
+    {
+      "ref": "p1",
+      "targetEntity": "Project",
+      "title": "Website redesign",
+      "fields": {
+        "status": "active",
+        "owner": "Dana"
+      }
+    },
+    {
+      "ref": "t1",
+      "targetEntity": "Task",
+      "title": "Draft wireframes",
+      "fields": {
+        "due": "2026-03-01",
+        "done": false
+      },
+      "parentRef": "p1"
+    },
+    {
+      "ref": "t2",
+      "targetEntity": "Task",
+      "title": "Review copy",
+      "fields": {
+        "tags": [
+          "copy",
+          "legal"
+        ]
+      },
+      "parentRef": "t1"
+    }
+  ]
+}

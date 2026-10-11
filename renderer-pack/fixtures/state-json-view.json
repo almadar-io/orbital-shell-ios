@@ -1,0 +1,42 @@
+{
+  "type": "state-json-view",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "defaultExpanded": true,
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "initialState": "Closed",
+  "label": "View Code",
+  "lang": "lang",
+  "name": "Door",
+  "role": "alert",
+  "skeleton": "header",
+  "states": [
+    "Closed",
+    "Open",
+    "Locked"
+  ],
+  "tabIndex": -1,
+  "transitions": [
+    {
+      "from": "Closed",
+      "to": "Open",
+      "event": "OPEN"
+    },
+    {
+      "from": "Open",
+      "to": "Closed",
+      "event": "CLOSE"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "type": "document-viewer",
+  "actions": [
+    {
+      "event": "EVENT",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "variant": "primary"
+    },
+    {
+      "event": "EVENT",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "variant": "primary"
+    },
+    {
+      "event": "EVENT",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "variant": "primary"
+    }
+  ],
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "content": "content",
+  "currentPage": 1,
+  "dir": "ltr",
+  "documentType": "pdf",
+  "documents": [
+    {
+      "content": "content 1",
+      "documentType": "pdf",
+      "label": "label 1",
+      "src": "src"
+    },
+    {
+      "content": "content 2",
+      "documentType": "pdf",
+      "label": "label 2",
+      "src": "src"
+    },
+    {
+      "content": "content 3",
+      "documentType": "pdf",
+      "label": "label 3",
+      "src": "src"
+    }
+  ],
+  "enter": "none",
+  "enterDelay": 1,
+  "height": 600,
+  "isLoading": false,
+  "lang": "lang",
+  "role": "alert",
+  "showDownload": false,
+  "showPrint": false,
+  "showToolbar": true,
+  "skeleton": "header",
+  "src": "src",
+  "surface": "auto",
+  "tabIndex": -1,
+  "title": "title",
+  "totalPages": 1
+}

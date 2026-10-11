@@ -1,0 +1,107 @@
+{
+  "type": "chemistry-canvas",
+  "animate": false,
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "",
+  "aria-labelledby": "",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "arrows": [
+    {
+      "x": 200,
+      "y": 330,
+      "angle": 0,
+      "length": 200,
+      "label": "heat"
+    }
+  ],
+  "atoms": [
+    {
+      "id": "c",
+      "x": 300,
+      "y": 200,
+      "element": "C",
+      "radius": 18,
+      "color": "series-2",
+      "lonePairs": 0,
+      "charge": "δ+"
+    },
+    {
+      "id": "o1",
+      "x": 144,
+      "y": 200,
+      "element": "O",
+      "radius": 16,
+      "color": "series-4",
+      "lonePairs": 2,
+      "charge": "δ-"
+    },
+    {
+      "id": "o2",
+      "x": 456,
+      "y": 200,
+      "element": "O",
+      "radius": 16,
+      "color": "series-4",
+      "lonePairs": 2,
+      "charge": "δ-"
+    }
+  ],
+  "backgroundColor": "",
+  "bondStyle": "parallel",
+  "bonds": [
+    {
+      "from": "c",
+      "to": "o1",
+      "type": "double"
+    },
+    {
+      "from": "c",
+      "to": "o2",
+      "type": "double",
+      "state": "forming"
+    }
+  ],
+  "className": "",
+  "containers": [
+    {
+      "x": 20,
+      "y": 40,
+      "width": 560,
+      "height": 300,
+      "divider": "dashed",
+      "leftLabel": "left",
+      "rightLabel": "right",
+      "label": "flask"
+    }
+  ],
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "equation": "CO2",
+  "equationColor": "",
+  "height": 400,
+  "interactive": false,
+  "isLoading": false,
+  "keyMap": {},
+  "keyUpMap": {},
+  "lang": "",
+  "mode": "2d",
+  "onShapeClick": false,
+  "readouts": [],
+  "role": "alert",
+  "series": [],
+  "shadows": false,
+  "shapes": [],
+  "showGrid": false,
+  "skeleton": "header",
+  "tabIndex": -1,
+  "title": "",
+  "traces": [],
+  "width": 600
+}

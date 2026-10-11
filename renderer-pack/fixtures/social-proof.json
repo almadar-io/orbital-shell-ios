@@ -1,0 +1,39 @@
+{
+  "type": "social-proof",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "items": [
+    {
+      "logo": "logo 1",
+      "name": "name 1",
+      "quote": "quote 1"
+    },
+    {
+      "logo": "logo 2",
+      "name": "name 2",
+      "quote": "quote 2"
+    },
+    {
+      "logo": "logo 3",
+      "name": "name 3",
+      "quote": "quote 3"
+    }
+  ],
+  "lang": "lang",
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1,
+  "variant": "logos"
+}

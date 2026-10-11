@@ -1,0 +1,154 @@
+{
+  "type": "scaled-diagram",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "children": [
+    {
+      "type": "state-machine-view",
+      "trait": {
+        "name": "OrderFlow",
+        "linkedEntity": "Order",
+        "states": [
+          {
+            "name": "browsing",
+            "isInitial": true,
+            "isTerminal": false
+          },
+          {
+            "name": "editing",
+            "isInitial": false,
+            "isTerminal": false
+          },
+          {
+            "name": "saving",
+            "isInitial": false,
+            "isTerminal": false
+          },
+          {
+            "name": "confirmed",
+            "isInitial": false,
+            "isTerminal": true
+          },
+          {
+            "name": "failed",
+            "isInitial": false,
+            "isTerminal": false
+          }
+        ],
+        "transitions": [
+          {
+            "from": "browsing",
+            "to": "editing",
+            "event": "EDIT",
+            "effects": [
+              {
+                "type": "render-ui",
+                "args": []
+              }
+            ],
+            "index": 0
+          },
+          {
+            "from": "editing",
+            "to": "saving",
+            "event": "SAVE",
+            "effects": [
+              {
+                "type": "persist",
+                "args": []
+              },
+              {
+                "type": "notify",
+                "args": []
+              }
+            ],
+            "index": 1
+          },
+          {
+            "from": "saving",
+            "to": "confirmed",
+            "event": "SAVED",
+            "effects": [
+              {
+                "type": "emit",
+                "args": []
+              },
+              {
+                "type": "render-ui",
+                "args": []
+              }
+            ],
+            "index": 2
+          },
+          {
+            "from": "saving",
+            "to": "failed",
+            "event": "SAVE_FAILED",
+            "effects": [
+              {
+                "type": "notify",
+                "args": []
+              }
+            ],
+            "index": 3
+          },
+          {
+            "from": "failed",
+            "to": "editing",
+            "event": "RETRY",
+            "effects": [],
+            "index": 4
+          },
+          {
+            "from": "editing",
+            "to": "browsing",
+            "event": "CANCEL",
+            "effects": [
+              {
+                "type": "render-ui",
+                "args": []
+              }
+            ],
+            "index": 5
+          },
+          {
+            "from": "confirmed",
+            "to": "browsing",
+            "event": "DONE",
+            "effects": [
+              {
+                "type": "navigate",
+                "args": []
+              }
+            ],
+            "index": 6
+          }
+        ],
+        "emittedEvents": [
+          "ORDER_SAVED"
+        ],
+        "listenedEvents": [
+          "PAYMENT_OK"
+        ]
+      },
+      "activeState": "saving",
+      "showHeader": false
+    }
+  ],
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "lang": "lang",
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1
+}

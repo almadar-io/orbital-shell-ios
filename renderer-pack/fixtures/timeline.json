@@ -1,0 +1,96 @@
+{
+  "type": "timeline",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dateField": "dateField",
+  "descriptionField": "descriptionField",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": [],
+  "fields": [
+    "fields 1",
+    "fields 2",
+    "fields 3"
+  ],
+  "isLoading": false,
+  "itemActions": [
+    {
+      "event": "EVENT",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "variant": "primary"
+    },
+    {
+      "event": "EVENT",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "variant": "primary"
+    },
+    {
+      "event": "EVENT",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "variant": "primary"
+    }
+  ],
+  "items": [
+    {
+      "date": "date 1",
+      "description": "description 1",
+      "icon": "star",
+      "id": "id 1",
+      "status": "complete",
+      "tags": [
+        "tags 1",
+        "tags 2",
+        "tags 3"
+      ],
+      "title": "title 1"
+    },
+    {
+      "date": "date 2",
+      "description": "description 2",
+      "icon": "bell",
+      "id": "id 2",
+      "status": "complete",
+      "tags": [
+        "tags 1",
+        "tags 2",
+        "tags 3"
+      ],
+      "title": "title 2"
+    },
+    {
+      "date": "date 3",
+      "description": "description 3",
+      "icon": "heart",
+      "id": "id 3",
+      "status": "complete",
+      "tags": [
+        "tags 1",
+        "tags 2",
+        "tags 3"
+      ],
+      "title": "title 3"
+    }
+  ],
+  "lang": "lang",
+  "look": "vertical-spacious",
+  "role": "alert",
+  "skeleton": "list",
+  "statusField": "statusField",
+  "surface": "auto",
+  "tabIndex": -1,
+  "title": "title",
+  "titleField": "titleField"
+}

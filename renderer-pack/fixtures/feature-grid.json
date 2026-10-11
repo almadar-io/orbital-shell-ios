@@ -1,0 +1,55 @@
+{
+  "type": "feature-grid",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "columns": 3,
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "gap": "md",
+  "items": [
+    {
+      "className": "className 1",
+      "description": "description 1",
+      "href": "href 1",
+      "icon": "star",
+      "linkLabel": "linkLabel 1",
+      "size": "sm",
+      "title": "title 1",
+      "variant": "default"
+    },
+    {
+      "className": "className 2",
+      "description": "description 2",
+      "href": "href 2",
+      "icon": "bell",
+      "linkLabel": "linkLabel 2",
+      "size": "sm",
+      "title": "title 2",
+      "variant": "default"
+    },
+    {
+      "className": "className 3",
+      "description": "description 3",
+      "href": "href 3",
+      "icon": "heart",
+      "linkLabel": "linkLabel 3",
+      "size": "sm",
+      "title": "title 3",
+      "variant": "default"
+    }
+  ],
+  "lang": "lang",
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1
+}

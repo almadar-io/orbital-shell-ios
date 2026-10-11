@@ -1,0 +1,5 @@
+{
+  "type": "trait-frame",
+  "fallback": "Trait frame fallback",
+  "traitName": "traitName"
+}

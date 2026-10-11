@@ -1,0 +1,146 @@
+{
+  "type": "physics-canvas",
+  "angles": [
+    {
+      "x": 522,
+      "y": 360,
+      "from": 180,
+      "to": 202.3,
+      "radius": 22,
+      "color": "series-2",
+      "label": "22.3°"
+    }
+  ],
+  "animate": false,
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "",
+  "aria-labelledby": "",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "backgroundColor": "",
+  "bodies": [
+    {
+      "id": "block",
+      "x": 300,
+      "y": 280,
+      "radius": 16,
+      "color": "series-1",
+      "vx": 2,
+      "vy": 1.2
+    }
+  ],
+  "className": "",
+  "constraints": [],
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "field": {
+    "kind": "into",
+    "spacing": 60,
+    "x": 30,
+    "y": 20,
+    "width": 540,
+    "height": 150
+  },
+  "forceScale": 20,
+  "height": 400,
+  "interactive": false,
+  "isLoading": false,
+  "keyMap": {},
+  "keyUpMap": {},
+  "lang": "",
+  "meters": [
+    {
+      "label": "KE",
+      "value": 4.5
+    },
+    {
+      "label": "PE",
+      "value": 9
+    }
+  ],
+  "mode": "2d",
+  "onShapeClick": false,
+  "readouts": [
+    {
+      "label": "angle",
+      "value": "22.3°"
+    }
+  ],
+  "role": "alert",
+  "sceneObjects": [
+    {
+      "kind": "ramp",
+      "x1": 180,
+      "y1": 220,
+      "x2": 522,
+      "y2": 360,
+      "color": "ink",
+      "fill": "fill",
+      "label": "22.3°"
+    },
+    {
+      "kind": "ground",
+      "y": 380,
+      "label": "floor"
+    }
+  ],
+  "series": [],
+  "shadows": false,
+  "shapes": [],
+  "showForces": false,
+  "showGrid": false,
+  "showVelocity": true,
+  "skeleton": "header",
+  "tabIndex": -1,
+  "title": "",
+  "traces": [],
+  "trails": [
+    {
+      "points": [
+        {
+          "x": 180,
+          "y": 220
+        },
+        {
+          "x": 220,
+          "y": 236
+        },
+        {
+          "x": 260,
+          "y": 252
+        },
+        {
+          "x": 300,
+          "y": 268
+        }
+      ],
+      "color": "series-1"
+    }
+  ],
+  "vectorScale": 1,
+  "vectors": [
+    {
+      "body": "block",
+      "dx": 0,
+      "dy": 20,
+      "color": "series-5",
+      "label": "mg"
+    },
+    {
+      "body": "block",
+      "dx": -8,
+      "dy": 18,
+      "color": "series-6",
+      "label": "N"
+    }
+  ],
+  "vectors3d": [],
+  "velocityScale": 20,
+  "width": 600
+}

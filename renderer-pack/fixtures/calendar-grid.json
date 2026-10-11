@@ -1,0 +1,62 @@
+{
+  "type": "calendar-grid",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "children": false,
+  "className": "className",
+  "colorField": "color",
+  "dayWindow": "auto",
+  "dir": "ltr",
+  "endField": "endTime",
+  "enter": "none",
+  "enterDelay": 1,
+  "events": [
+    {
+      "color": "color 1",
+      "endTime": "endTime 1",
+      "startTime": "startTime 1",
+      "title": "title 1"
+    },
+    {
+      "color": "color 2",
+      "endTime": "endTime 2",
+      "startTime": "startTime 2",
+      "title": "title 2"
+    },
+    {
+      "color": "color 3",
+      "endTime": "endTime 3",
+      "startTime": "startTime 3",
+      "title": "title 3"
+    }
+  ],
+  "lang": "lang",
+  "longPressEvent": "LONGPRESSEVENT",
+  "longPressPayload": {},
+  "onDayClick": false,
+  "onEventClick": false,
+  "onSlotClick": false,
+  "renderItem": false,
+  "role": "alert",
+  "skeleton": "header",
+  "startField": "startTime",
+  "surface": "auto",
+  "swipeLeftEvent": "SWIPELEFTEVENT",
+  "swipeRightEvent": "SWIPERIGHTEVENT",
+  "tabIndex": -1,
+  "timeSlots": [
+    "timeSlots 1",
+    "timeSlots 2",
+    "timeSlots 3"
+  ],
+  "titleField": "title",
+  "weekStart": "2026-01-01"
+}

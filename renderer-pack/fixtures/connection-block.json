@@ -1,0 +1,22 @@
+{
+  "type": "connection-block",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "content": "You already know **fractions**. This lesson builds on them:\n\n- Parts of a whole\n- Comparing sizes",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "lang": "lang",
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1
+}

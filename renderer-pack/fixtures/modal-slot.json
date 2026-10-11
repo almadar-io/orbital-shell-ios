@@ -1,0 +1,13 @@
+{
+  "type": "modal-slot",
+  "children": "children",
+  "className": "className",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": "entity",
+  "isLoading": false,
+  "size": "md",
+  "skeleton": "header",
+  "sourceTrait": "sourceTrait",
+  "title": "title"
+}

@@ -1,0 +1,129 @@
+{
+  "type": "subagent-trace-panel",
+  "activeFilters": {},
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "coordinatorActivities": [
+    {
+      "content": "content 1",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 1,
+      "type": "message"
+    },
+    {
+      "content": "content 2",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 2,
+      "type": "message"
+    },
+    {
+      "content": "content 3",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 3,
+      "type": "message"
+    }
+  ],
+  "coordinatorMessages": [
+    {
+      "role": "user",
+      "content": "Build an order tracker"
+    },
+    {
+      "role": "assistant",
+      "content": "I will start with the **Orders** orbital.",
+      "reasoningContent": "The request names one entity, so a single orbital is enough.",
+      "toolCalls": [
+        {
+          "name": "plan_orbitals",
+          "args": {
+            "orbitals": [
+              "Orders"
+            ],
+            "mode": "single"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "toolName": "plan_orbitals",
+      "toolCallId": "call-1234567890",
+      "content": "{\"committed\":true,\"orbitals\":[\"Orders\"]}"
+    }
+  ],
+  "dir": "ltr",
+  "disclosureLevel": 2,
+  "enter": "none",
+  "enterDelay": 1,
+  "focusedOrbital": "",
+  "isLoading": false,
+  "lang": "lang",
+  "mode": "overlay",
+  "onClose": "TRACE_CLOSE",
+  "open": true,
+  "page": 1,
+  "pageSize": 1,
+  "role": "alert",
+  "searchValue": "searchValue",
+  "selectedIds": [
+    "selectedIds 1",
+    "selectedIds 2",
+    "selectedIds 3"
+  ],
+  "skeleton": "header",
+  "sortBy": "sortBy",
+  "sortDirection": "asc",
+  "subagents": [
+    {
+      "id": "s1",
+      "name": "Entity author",
+      "role": "llm",
+      "orbitalName": "Orders",
+      "status": "running",
+      "task": "Draft the Order entity fields",
+      "messages": [
+        {
+          "message": "{\"entity\":\"Order\"}",
+          "tool": "write_entity",
+          "timestamp": 1760000000000
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "name": "Trait wiring",
+      "role": "deterministic",
+      "orbitalName": "Orders",
+      "status": "complete",
+      "task": "Wire the browse trait",
+      "messages": []
+    },
+    {
+      "id": "s3",
+      "name": "Validator",
+      "role": "tool",
+      "status": "error",
+      "task": "Validate the program",
+      "messages": [
+        {
+          "message": "2 errors",
+          "timestamp": 1760000005000
+        }
+      ]
+    }
+  ],
+  "tabIndex": -1,
+  "totalCount": 1
+}

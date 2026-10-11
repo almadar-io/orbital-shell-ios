@@ -1,0 +1,34 @@
+{
+  "type": "agent-chat-feed",
+  "activities": [
+    {
+      "content": "content 1",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 1,
+      "type": "message"
+    },
+    {
+      "content": "content 2",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 2,
+      "type": "message"
+    },
+    {
+      "content": "content 3",
+      "isStreaming": false,
+      "role": "user",
+      "timestamp": 3,
+      "type": "message"
+    }
+  ],
+  "className": "className",
+  "emptyTitle": "emptyTitle",
+  "enter": "none",
+  "enterDelay": 1,
+  "idPrefix": "idPrefix",
+  "rawLlmPreferenceKey": "rawLlmPreferenceKey",
+  "skeleton": "header",
+  "working": false
+}

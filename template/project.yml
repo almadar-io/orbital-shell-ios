@@ -1,0 +1,80 @@
+name: {{APP_CLASS_NAME}}
+packages:
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: "1.17.0"
+targets:
+  {{APP_CLASS_NAME}}:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - Sources/OrbitalApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: {{APP_PACKAGE}}
+        INFOPLIST_FILE: Info.plist
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Swift↔Rust bridge: add the generated Bridge dir so the module map is found.
+        SWIFT_INCLUDE_PATHS: $(SRCROOT)/Sources/OrbitalApp/Generated/Bridge
+        # Link the Rust static lib built by `cargo build --target aarch64-apple-ios`.
+        # Set CARGO_BUILD_DIR to the Cargo target directory before running xcodegen.
+        OTHER_LDFLAGS: -lorbital_ffi
+        LIBRARY_SEARCH_PATHS: $(CARGO_BUILD_DIR)/aarch64-apple-ios/release $(CARGO_BUILD_DIR)/aarch64-apple-ios-sim/release
+        # `make ios-lib` builds the arm64 simulator slice only.
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+        # Identity provider (native sign-in). Pass real values on the xcodebuild command line;
+        # blank leaves sign-in unconfigured. See OrbitalAuth.swift.
+        ORBITAL_FIREBASE_API_KEY: ""
+        ORBITAL_FIREBASE_PROJECT_ID: ""
+        ORBITAL_AUTH_EMULATOR_HOST: ""
+    info:
+      path: Info.plist
+      properties:
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UILaunchStoryboardName: ""
+        NSCameraUsageDescription: "The camera scans QR codes inside this app."
+        OrbitalFirebaseApiKey: $(ORBITAL_FIREBASE_API_KEY)
+        OrbitalFirebaseProjectId: $(ORBITAL_FIREBASE_PROJECT_ID)
+        OrbitalAuthEmulatorHost: $(ORBITAL_AUTH_EMULATOR_HOST)
+  {{APP_CLASS_NAME}}Tests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      # Fixture JSONs `IosBackend` writes under Resources/pattern-fixtures/
+      # (Program C wave C4, `docs/Almadar_Compiler_Gaps.md` §157) — no
+      # separate `resources:` entry: they're INSIDE this same sources root,
+      # so xcodegen's own "non-code file under a sources tree is a resource
+      # of that target" auto-detection bundles them (a `resources:` entry
+      # here, or nesting the fixtures under the APP target's `sources:`
+      # root instead, both silently bundle them into the APP target).
+      - Sources/OrbitalAppTests
+    dependencies:
+      - target: {{APP_CLASS_NAME}}
+      - package: SnapshotTesting
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+  {{APP_CLASS_NAME}}VerifyDriver:
+    # `orb verify` tap driver: ONE long-lived UI test that launches the app with the
+    # verify bridge on and serves HTTP+JSON on 127.0.0.1:$ORBITAL_DRIVER_PORT.
+    # Run it with `./orb-build.sh --driver`; it is not part of `--test`.
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - Sources/OrbitalAppVerifyDriver
+    dependencies:
+      - target: {{APP_CLASS_NAME}}
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64

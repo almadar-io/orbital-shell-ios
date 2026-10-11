@@ -1,0 +1,14 @@
+{
+  "type": "geometric-pattern",
+  "children": "children",
+  "className": "className",
+  "color": "var(--color-primary)",
+  "enter": "none",
+  "enterDelay": 1,
+  "mode": "background",
+  "opacity": 0.06,
+  "scale": 1,
+  "skeleton": "header",
+  "strokeWidth": 0.5,
+  "variant": "star8"
+}

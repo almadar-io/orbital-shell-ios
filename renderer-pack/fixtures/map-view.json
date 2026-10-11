@@ -1,0 +1,76 @@
+{
+  "type": "map-view",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "centerLat": 51.505,
+  "centerLng": -0.09,
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "height": "260px",
+  "lang": "lang",
+  "mapClickEvent": "MAP_CLICK",
+  "markerClickEvent": "MARKER_CLICK",
+  "markers": [
+    {
+      "id": "tower",
+      "lat": 51.5081,
+      "lng": -0.0759,
+      "label": "Tower of London",
+      "category": "landmark"
+    },
+    {
+      "id": "bridge",
+      "lat": 51.5055,
+      "lng": -0.0754,
+      "label": "Tower Bridge",
+      "category": "landmark"
+    },
+    {
+      "id": "eye",
+      "lat": 51.5033,
+      "lng": -0.1195
+    }
+  ],
+  "onMapClick": false,
+  "onMarkerClick": false,
+  "role": "alert",
+  "routes": [
+    {
+      "id": "walk",
+      "waypoints": [
+        {
+          "lat": 51.5033,
+          "lng": -0.1195
+        },
+        {
+          "lat": 51.5055,
+          "lng": -0.0754
+        },
+        {
+          "lat": 51.5081,
+          "lng": -0.0759
+        }
+      ],
+      "weight": 4,
+      "opacity": 0.8,
+      "dashArray": "8 4",
+      "label": "Riverside walk"
+    }
+  ],
+  "showAttribution": true,
+  "showClickedPin": false,
+  "skeleton": "header",
+  "surface": "auto",
+  "tabIndex": -1,
+  "zoom": 13
+}

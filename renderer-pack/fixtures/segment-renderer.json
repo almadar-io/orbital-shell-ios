@@ -1,0 +1,74 @@
+{
+  "type": "segment-renderer",
+  "activationSaveEvent": "SAVE_ACTIVATION",
+  "annotationEvent": "ANNOTATIONEVENT",
+  "annotations": [
+    {
+      "id": "id 1",
+      "kind": "question",
+      "text": "text 1"
+    },
+    {
+      "id": "id 2",
+      "kind": "question",
+      "text": "text 2"
+    },
+    {
+      "id": "id 3",
+      "kind": "question",
+      "text": "text 3"
+    }
+  ],
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "askEvent": "ASKEVENT",
+  "askLabel": "askLabel",
+  "bloomAnswerEvent": "ANSWER_BLOOM",
+  "className": "className",
+  "codeOutputs": {
+    "3": {
+      "stdout": "58.800000000000004",
+      "stderr": "",
+      "exitCode": 0,
+      "testResults": []
+    }
+  },
+  "containerClassName": "containerClassName",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "lang": "lang",
+  "lesson": "<activate>What do you already know about energy?</activate>\n\n<connect>You have used **kinetic energy** when riding a bike.</connect>\n\n# Potential energy\n\nEnergy stored by position.\n\n```python run\nm = 2\ng = 9.8\nh = 3\nprint(m * g * h)\n```\n\n<question>What is the unit of energy?</question><answer>Joule</answer>\n\n<reflect>Where do you see stored energy at home?</reflect>\n\n<bloom level=\"apply\"><question>Compute m*g*h for m=1, h=2.</question><answer>19.6 J</answer></bloom>",
+  "noteEvent": "NOTEEVENT",
+  "noteLabel": "noteLabel",
+  "onRenderVisualization": false,
+  "reflectionSaveEvent": "SAVE_REFLECTION",
+  "resetCodeEvent": "RESET_LESSON_CODE",
+  "role": "alert",
+  "runCodeEvent": "RUN_LESSON_CODE",
+  "runningCode": "runningCode",
+  "segments": [
+    {
+      "content": "content 1",
+      "type": "markdown"
+    },
+    {
+      "content": "content 2",
+      "type": "markdown"
+    },
+    {
+      "content": "content 3",
+      "type": "markdown"
+    }
+  ],
+  "skeleton": "header",
+  "tabIndex": -1
+}

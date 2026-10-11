@@ -1,0 +1,427 @@
+{
+  "type": "form",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "cancelEvent": "CANCEL",
+  "cancelLabel": "cancelLabel",
+  "children": "children",
+  "className": "className",
+  "conditionalFields": false,
+  "configPath": "configPath",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": [],
+  "fieldOverrides": [
+    {
+      "hint": "hint 1",
+      "label": "label 1",
+      "name": "name 1",
+      "placeholder": "placeholder 1"
+    },
+    {
+      "hint": "hint 2",
+      "label": "label 2",
+      "name": "name 2",
+      "placeholder": "placeholder 2"
+    },
+    {
+      "hint": "hint 3",
+      "label": "label 3",
+      "name": "name 3",
+      "placeholder": "placeholder 3"
+    }
+  ],
+  "fields": [
+    {
+      "defaultValue": "defaultValue 1",
+      "disabled": false,
+      "field": "field 1",
+      "hint": "hint 1",
+      "inputType": "inputType 1",
+      "label": "label 1",
+      "labels": {},
+      "max": 1,
+      "min": 1,
+      "name": "name 1",
+      "options": [
+        {
+          "label": "label 1",
+          "value": "value 1"
+        },
+        {
+          "label": "label 2",
+          "value": "value 2"
+        },
+        {
+          "label": "label 3",
+          "value": "value 3"
+        }
+      ],
+      "pattern": "pattern 1",
+      "placeholder": "placeholder 1",
+      "readonly": false,
+      "relation": {
+        "cardinality": "one",
+        "displayField": "displayField 1",
+        "entity": "entity 1"
+      },
+      "required": false,
+      "type": "type 1",
+      "validation": {
+        "enum": [
+          "enum 1",
+          "enum 2",
+          "enum 3"
+        ]
+      },
+      "values": [
+        "values 1",
+        "values 2",
+        "values 3"
+      ]
+    },
+    {
+      "defaultValue": "defaultValue 2",
+      "disabled": false,
+      "field": "field 2",
+      "hint": "hint 2",
+      "inputType": "inputType 2",
+      "label": "label 2",
+      "labels": {},
+      "max": 2,
+      "min": 2,
+      "name": "name 2",
+      "options": [
+        {
+          "label": "label 1",
+          "value": "value 1"
+        },
+        {
+          "label": "label 2",
+          "value": "value 2"
+        },
+        {
+          "label": "label 3",
+          "value": "value 3"
+        }
+      ],
+      "pattern": "pattern 2",
+      "placeholder": "placeholder 2",
+      "readonly": false,
+      "relation": {
+        "cardinality": "one",
+        "displayField": "displayField 2",
+        "entity": "entity 2"
+      },
+      "required": false,
+      "type": "type 2",
+      "validation": {
+        "enum": [
+          "enum 1",
+          "enum 2",
+          "enum 3"
+        ]
+      },
+      "values": [
+        "values 1",
+        "values 2",
+        "values 3"
+      ]
+    },
+    {
+      "defaultValue": "defaultValue 3",
+      "disabled": false,
+      "field": "field 3",
+      "hint": "hint 3",
+      "inputType": "inputType 3",
+      "label": "label 3",
+      "labels": {},
+      "max": 3,
+      "min": 3,
+      "name": "name 3",
+      "options": [
+        {
+          "label": "label 1",
+          "value": "value 1"
+        },
+        {
+          "label": "label 2",
+          "value": "value 2"
+        },
+        {
+          "label": "label 3",
+          "value": "value 3"
+        }
+      ],
+      "pattern": "pattern 3",
+      "placeholder": "placeholder 3",
+      "readonly": false,
+      "relation": {
+        "cardinality": "one",
+        "displayField": "displayField 3",
+        "entity": "entity 3"
+      },
+      "required": false,
+      "type": "type 3",
+      "validation": {
+        "enum": [
+          "enum 1",
+          "enum 2",
+          "enum 3"
+        ]
+      },
+      "values": [
+        "values 1",
+        "values 2",
+        "values 3"
+      ]
+    }
+  ],
+  "gap": "md",
+  "hiddenCalculations": false,
+  "initialData": {},
+  "isLoading": false,
+  "lang": "lang",
+  "layout": "vertical",
+  "mode": "mode",
+  "onCancel": "onCancel",
+  "onFieldChange": false,
+  "onSubmit": "onSubmit",
+  "relationsData": {},
+  "relationsLoading": {},
+  "repeatable": false,
+  "role": "alert",
+  "sections": [
+    {
+      "collapsible": false,
+      "condition": "condition",
+      "fields": [
+        {
+          "defaultValue": "defaultValue 1",
+          "disabled": false,
+          "field": "field 1",
+          "hint": "hint 1",
+          "inputType": "inputType 1",
+          "label": "label 1",
+          "labels": {},
+          "max": 1,
+          "min": 1,
+          "name": "name 1",
+          "options": [],
+          "pattern": "pattern 1",
+          "placeholder": "placeholder 1",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 1",
+          "validation": {},
+          "values": []
+        },
+        {
+          "defaultValue": "defaultValue 2",
+          "disabled": false,
+          "field": "field 2",
+          "hint": "hint 2",
+          "inputType": "inputType 2",
+          "label": "label 2",
+          "labels": {},
+          "max": 2,
+          "min": 2,
+          "name": "name 2",
+          "options": [],
+          "pattern": "pattern 2",
+          "placeholder": "placeholder 2",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 2",
+          "validation": {},
+          "values": []
+        },
+        {
+          "defaultValue": "defaultValue 3",
+          "disabled": false,
+          "field": "field 3",
+          "hint": "hint 3",
+          "inputType": "inputType 3",
+          "label": "label 3",
+          "labels": {},
+          "max": 3,
+          "min": 3,
+          "name": "name 3",
+          "options": [],
+          "pattern": "pattern 3",
+          "placeholder": "placeholder 3",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 3",
+          "validation": {},
+          "values": []
+        }
+      ],
+      "id": "id 1",
+      "title": "title 1"
+    },
+    {
+      "collapsible": false,
+      "condition": "condition",
+      "fields": [
+        {
+          "defaultValue": "defaultValue 1",
+          "disabled": false,
+          "field": "field 1",
+          "hint": "hint 1",
+          "inputType": "inputType 1",
+          "label": "label 1",
+          "labels": {},
+          "max": 1,
+          "min": 1,
+          "name": "name 1",
+          "options": [],
+          "pattern": "pattern 1",
+          "placeholder": "placeholder 1",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 1",
+          "validation": {},
+          "values": []
+        },
+        {
+          "defaultValue": "defaultValue 2",
+          "disabled": false,
+          "field": "field 2",
+          "hint": "hint 2",
+          "inputType": "inputType 2",
+          "label": "label 2",
+          "labels": {},
+          "max": 2,
+          "min": 2,
+          "name": "name 2",
+          "options": [],
+          "pattern": "pattern 2",
+          "placeholder": "placeholder 2",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 2",
+          "validation": {},
+          "values": []
+        },
+        {
+          "defaultValue": "defaultValue 3",
+          "disabled": false,
+          "field": "field 3",
+          "hint": "hint 3",
+          "inputType": "inputType 3",
+          "label": "label 3",
+          "labels": {},
+          "max": 3,
+          "min": 3,
+          "name": "name 3",
+          "options": [],
+          "pattern": "pattern 3",
+          "placeholder": "placeholder 3",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 3",
+          "validation": {},
+          "values": []
+        }
+      ],
+      "id": "id 2",
+      "title": "title 2"
+    },
+    {
+      "collapsible": false,
+      "condition": "condition",
+      "fields": [
+        {
+          "defaultValue": "defaultValue 1",
+          "disabled": false,
+          "field": "field 1",
+          "hint": "hint 1",
+          "inputType": "inputType 1",
+          "label": "label 1",
+          "labels": {},
+          "max": 1,
+          "min": 1,
+          "name": "name 1",
+          "options": [],
+          "pattern": "pattern 1",
+          "placeholder": "placeholder 1",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 1",
+          "validation": {},
+          "values": []
+        },
+        {
+          "defaultValue": "defaultValue 2",
+          "disabled": false,
+          "field": "field 2",
+          "hint": "hint 2",
+          "inputType": "inputType 2",
+          "label": "label 2",
+          "labels": {},
+          "max": 2,
+          "min": 2,
+          "name": "name 2",
+          "options": [],
+          "pattern": "pattern 2",
+          "placeholder": "placeholder 2",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 2",
+          "validation": {},
+          "values": []
+        },
+        {
+          "defaultValue": "defaultValue 3",
+          "disabled": false,
+          "field": "field 3",
+          "hint": "hint 3",
+          "inputType": "inputType 3",
+          "label": "label 3",
+          "labels": {},
+          "max": 3,
+          "min": 3,
+          "name": "name 3",
+          "options": [],
+          "pattern": "pattern 3",
+          "placeholder": "placeholder 3",
+          "readonly": false,
+          "relation": {},
+          "required": false,
+          "type": "type 3",
+          "validation": {},
+          "values": []
+        }
+      ],
+      "id": "id 3",
+      "title": "title 3"
+    }
+  ],
+  "showCancel": false,
+  "showSubmit": true,
+  "skeleton": "form",
+  "submitEvent": "SAVE",
+  "submitLabel": "submitLabel",
+  "surface": "auto",
+  "tabIndex": -1,
+  "title": "title",
+  "violationTriggers": false
+}

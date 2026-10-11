@@ -1,0 +1,117 @@
+{
+  "type": "dashboard-layout",
+  "appName": "Notes",
+  "children": {
+    "type": "stack",
+    "direction": "vertical",
+    "gap": "md",
+    "children": [
+      {
+        "type": "typography",
+        "variant": "h3",
+        "content": "Welcome"
+      }
+    ]
+  },
+  "currentPath": "currentPath",
+  "fullBleed": false,
+  "headerActions": "headerActions",
+  "layoutMode": "sidebar",
+  "logo": "logo",
+  "navItems": [
+    {
+      "label": "Inbox",
+      "icon": "inbox",
+      "event": "NAV_INBOX"
+    },
+    {
+      "label": "Archive",
+      "icon": "archive",
+      "event": "NAV_ARCHIVE"
+    }
+  ],
+  "notificationClickEvent": "NOTIFICATIONCLICKEVENT",
+  "notifications": [
+    {
+      "createdAt": "createdAt 1",
+      "description": "description 1",
+      "id": "id 1",
+      "message": "message 1",
+      "read": false
+    },
+    {
+      "createdAt": "createdAt 2",
+      "description": "description 2",
+      "id": "id 2",
+      "message": "message 2",
+      "read": false
+    },
+    {
+      "createdAt": "createdAt 3",
+      "description": "description 3",
+      "id": "id 3",
+      "message": "message 3",
+      "read": false
+    }
+  ],
+  "onNotificationClick": false,
+  "onSearchSubmit": false,
+  "onSignOut": false,
+  "searchEvent": "SEARCHEVENT",
+  "showSearch": false,
+  "showThemeToggle": true,
+  "sidebarContent": "sidebarContent",
+  "sidebarFooter": "sidebarFooter",
+  "topBarActions": [
+    {
+      "badge": "badge 1",
+      "event": "EVENT",
+      "icon": "star",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "variant": "default"
+    },
+    {
+      "badge": "badge 2",
+      "event": "EVENT",
+      "icon": "bell",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "variant": "default"
+    },
+    {
+      "badge": "badge 3",
+      "event": "EVENT",
+      "icon": "heart",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "variant": "default"
+    }
+  ],
+  "userMenuItems": [
+    {
+      "badge": "badge 1",
+      "event": "EVENT",
+      "icon": "star",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "variant": "default"
+    },
+    {
+      "badge": "badge 2",
+      "event": "EVENT",
+      "icon": "bell",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "variant": "default"
+    },
+    {
+      "badge": "badge 3",
+      "event": "EVENT",
+      "icon": "heart",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "variant": "default"
+    }
+  ]
+}

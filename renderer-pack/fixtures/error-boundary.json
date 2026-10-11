@@ -1,0 +1,10 @@
+{
+  "type": "error-boundary",
+  "children": "children",
+  "className": "className",
+  "enter": "none",
+  "enterDelay": 1,
+  "fallback": "fallback",
+  "onError": false,
+  "skeleton": "header"
+}

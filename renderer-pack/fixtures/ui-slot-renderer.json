@@ -1,0 +1,15 @@
+{
+  "type": "ui-slot-renderer",
+  "children": "Slot content",
+  "className": "className",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": "entity",
+  "hudMode": "fixed",
+  "includeFloating": false,
+  "includeHud": false,
+  "isLoading": false,
+  "pageKey": "pageKey",
+  "skeleton": "header",
+  "suspense": false
+}

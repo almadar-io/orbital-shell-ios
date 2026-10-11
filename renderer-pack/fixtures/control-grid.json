@@ -1,0 +1,113 @@
+{
+  "type": "control-grid",
+  "actionEvent": "ACTIONEVENT",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "buttons": [
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 1",
+        "dimension": "2d",
+        "name": "name 1",
+        "role": "role 1",
+        "sprite": "sprite 1",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 1",
+        "url": "url",
+        "variant": "variant 1"
+      },
+      "icon": "star",
+      "id": "id 1",
+      "label": "label 1",
+      "variant": "variant 1"
+    },
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 2",
+        "dimension": "2d",
+        "name": "name 2",
+        "role": "role 2",
+        "sprite": "sprite 2",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 2",
+        "url": "url",
+        "variant": "variant 2"
+      },
+      "icon": "bell",
+      "id": "id 2",
+      "label": "label 2",
+      "variant": "variant 2"
+    },
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 3",
+        "dimension": "2d",
+        "name": "name 3",
+        "role": "role 3",
+        "sprite": "sprite 3",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 3",
+        "url": "url",
+        "variant": "variant 3"
+      },
+      "icon": "heart",
+      "id": "id 3",
+      "label": "label 3",
+      "variant": "variant 3"
+    }
+  ],
+  "className": "className",
+  "dir": "ltr",
+  "directionAssets": {},
+  "directionEvent": "DIRECTIONEVENT",
+  "directionEvents": {
+    "up": "MOVE_UP",
+    "down": "MOVE_DOWN",
+    "left": "MOVE_LEFT",
+    "right": "MOVE_RIGHT"
+  },
+  "directionReleaseEvents": {},
+  "disabled": false,
+  "enter": "none",
+  "enterDelay": 1,
+  "includeDiagonals": false,
+  "kind": "dpad",
+  "lang": "lang",
+  "layout": "horizontal",
+  "onAction": false,
+  "onDirection": false,
+  "role": "alert",
+  "size": "md",
+  "skeleton": "header",
+  "tabIndex": -1,
+  "visibility": "auto"
+}

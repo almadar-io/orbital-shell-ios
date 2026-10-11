@@ -1,0 +1,114 @@
+{
+  "type": "graph-canvas",
+  "actions": [],
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "",
+  "aria-labelledby": "",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "",
+  "description": "",
+  "dir": "ltr",
+  "draggable": true,
+  "edges": [
+    {
+      "source": "api",
+      "target": "db",
+      "label": "sql"
+    },
+    {
+      "source": "api",
+      "target": "cache",
+      "label": "get"
+    },
+    {
+      "source": "worker",
+      "target": "q"
+    }
+  ],
+  "enter": "none",
+  "enterDelay": 1,
+  "height": 300,
+  "interactive": true,
+  "isLoading": false,
+  "lang": "",
+  "layout": "force",
+  "linkDistance": 100,
+  "linkOpacity": 0.18,
+  "nodeClickEvent": "UNIT_CLICK",
+  "nodeSpacing": 28,
+  "nodes": [
+    {
+      "id": "api",
+      "label": "api gateway",
+      "group": "compute",
+      "color": "success",
+      "size": 10
+    },
+    {
+      "id": "worker",
+      "label": "worker",
+      "group": "compute",
+      "color": "warning",
+      "size": 10
+    },
+    {
+      "id": "db",
+      "label": "db",
+      "group": "data",
+      "color": "error",
+      "size": 10
+    },
+    {
+      "id": "cache",
+      "label": "cache",
+      "group": "data",
+      "color": "",
+      "size": 10,
+      "badge": 4
+    },
+    {
+      "id": "q",
+      "label": "queue",
+      "group": "data",
+      "size": 10,
+      "mark": {
+        "kind": "proposed",
+        "suggestionId": "s"
+      }
+    },
+    {
+      "id": "idle",
+      "label": "idle unit with a very long label name",
+      "group": "compute",
+      "size": 10,
+      "mark": {
+        "kind": "suggested",
+        "suggestionId": "t"
+      }
+    }
+  ],
+  "onBadgeClick": false,
+  "onMarkClick": false,
+  "onNodeClick": false,
+  "onNodeDoubleClick": false,
+  "proposedEdges": [
+    {
+      "source": "q",
+      "target": "db"
+    }
+  ],
+  "repulsion": 800,
+  "role": "alert",
+  "selectedNodeId": "api",
+  "showLabels": true,
+  "similarity": [],
+  "skeleton": "header",
+  "tabIndex": -1,
+  "title": ""
+}

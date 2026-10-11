@@ -1,0 +1,218 @@
+{
+  "type": "biology-canvas",
+  "animate": false,
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "",
+  "aria-labelledby": "",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "backgroundColor": "",
+  "bands": [
+    {
+      "label": "Producers"
+    },
+    {
+      "label": "Herbivores"
+    },
+    {
+      "label": "Carnivores"
+    },
+    {
+      "label": "Apex"
+    }
+  ],
+  "className": "",
+  "compartments": [],
+  "dir": "ltr",
+  "edges": [
+    {
+      "from": "rabbit",
+      "to": "grass",
+      "directed": true,
+      "color": "guide",
+      "label": "eats"
+    },
+    {
+      "from": "insect",
+      "to": "grass",
+      "directed": true,
+      "color": "guide",
+      "label": "eats"
+    },
+    {
+      "from": "fox",
+      "to": "rabbit",
+      "directed": true,
+      "color": "guide",
+      "label": "eats"
+    },
+    {
+      "from": "fox",
+      "to": "insect",
+      "directed": true,
+      "color": "guide",
+      "label": "eats"
+    },
+    {
+      "from": "hawk",
+      "to": "fox",
+      "directed": true,
+      "color": "guide",
+      "label": "eats"
+    }
+  ],
+  "enter": "none",
+  "enterDelay": 1,
+  "height": 400,
+  "interactive": false,
+  "isLoading": false,
+  "keyMap": {},
+  "keyUpMap": {},
+  "lang": "",
+  "mode": "2d",
+  "nodes": [
+    {
+      "id": "grass",
+      "x": 300,
+      "y": 300,
+      "radius": 48,
+      "color": "series-1",
+      "label": "Grass (120)",
+      "kind": "organism"
+    },
+    {
+      "id": "rabbit",
+      "x": 180,
+      "y": 230,
+      "radius": 16,
+      "color": "series-2",
+      "label": "Rabbit (40)",
+      "kind": "organism"
+    },
+    {
+      "id": "insect",
+      "x": 420,
+      "y": 230,
+      "radius": 22,
+      "color": "series-3",
+      "label": "Insect (55)",
+      "kind": "organism"
+    },
+    {
+      "id": "fox",
+      "x": 220,
+      "y": 110,
+      "radius": 7.2,
+      "color": "series-4",
+      "label": "Fox (18)",
+      "kind": "organism"
+    },
+    {
+      "id": "hawk",
+      "x": 400,
+      "y": 80,
+      "radius": 6,
+      "color": "series-5",
+      "label": "Hawk (10)",
+      "kind": "organism"
+    }
+  ],
+  "onShapeClick": false,
+  "readouts": [],
+  "role": "alert",
+  "series": [],
+  "shadows": false,
+  "shapes": [],
+  "showGrid": false,
+  "skeleton": "header",
+  "stageStyle": "timeline",
+  "stages": [],
+  "tabIndex": -1,
+  "title": "",
+  "traces": [
+    {
+      "series": [
+        {
+          "label": "Grass",
+          "samples": [
+            {
+              "x": 0,
+              "y": 120
+            },
+            {
+              "x": 1,
+              "y": 115
+            },
+            {
+              "x": 2,
+              "y": 110
+            },
+            {
+              "x": 3,
+              "y": 105
+            },
+            {
+              "x": 4,
+              "y": 100
+            },
+            {
+              "x": 5,
+              "y": 95
+            },
+            {
+              "x": 6,
+              "y": 90
+            },
+            {
+              "x": 7,
+              "y": 85
+            }
+          ]
+        },
+        {
+          "label": "Fox",
+          "samples": [
+            {
+              "x": 0,
+              "y": 18
+            },
+            {
+              "x": 1,
+              "y": 20
+            },
+            {
+              "x": 2,
+              "y": 22
+            },
+            {
+              "x": 3,
+              "y": 24
+            },
+            {
+              "x": 4,
+              "y": 26
+            },
+            {
+              "x": 5,
+              "y": 28
+            },
+            {
+              "x": 6,
+              "y": 30
+            },
+            {
+              "x": 7,
+              "y": 32
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "width": 600
+}

@@ -1,0 +1,93 @@
+{
+  "type": "form-actions",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "children": "children",
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": "entity",
+  "filters": [
+    {
+      "field": "field 1",
+      "filterType": "text",
+      "label": "label 1",
+      "max": 1,
+      "min": 1,
+      "options": [
+        "options 1",
+        "options 2",
+        "options 3"
+      ],
+      "step": 1,
+      "type": "text"
+    },
+    {
+      "field": "field 2",
+      "filterType": "text",
+      "label": "label 2",
+      "max": 2,
+      "min": 2,
+      "options": [
+        "options 1",
+        "options 2",
+        "options 3"
+      ],
+      "step": 2,
+      "type": "text"
+    },
+    {
+      "field": "field 3",
+      "filterType": "text",
+      "label": "label 3",
+      "max": 3,
+      "min": 3,
+      "options": [
+        "options 1",
+        "options 2",
+        "options 3"
+      ],
+      "step": 3,
+      "type": "text"
+    }
+  ],
+  "lang": "lang",
+  "look": "right-aligned-buttons",
+  "orientation": "horizontal",
+  "role": "alert",
+  "secondary": [
+    {
+      "actionType": "actionType 1",
+      "event": "EVENT",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "variant": "variant 1"
+    },
+    {
+      "actionType": "actionType 2",
+      "event": "EVENT",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "variant": "variant 2"
+    },
+    {
+      "actionType": "actionType 3",
+      "event": "EVENT",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "variant": "variant 3"
+    }
+  ],
+  "skeleton": "header",
+  "tabIndex": -1,
+  "variant": "default"
+}

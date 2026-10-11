@@ -1,0 +1,78 @@
+{
+  "type": "positioned-canvas",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dir": "ltr",
+  "editable": true,
+  "enter": "none",
+  "enterDelay": 1,
+  "height": 260,
+  "items": [
+    {
+      "id": "t1",
+      "label": "T1",
+      "x": 24,
+      "y": 24,
+      "capacity": 4,
+      "partySize": 3,
+      "serverName": "Sam",
+      "status": "seated",
+      "shape": "round"
+    },
+    {
+      "id": "t2",
+      "label": "T2",
+      "x": 150,
+      "y": 40,
+      "capacity": 2,
+      "status": "empty",
+      "shape": "square"
+    },
+    {
+      "id": "t3",
+      "label": "T3",
+      "x": 260,
+      "y": 24,
+      "capacity": 6,
+      "status": "awaiting-bill",
+      "shape": "rectangle"
+    },
+    {
+      "id": "t4",
+      "label": "T4",
+      "x": 60,
+      "y": 150,
+      "capacity": 4,
+      "status": "ordered",
+      "shape": "round"
+    },
+    {
+      "id": "t5",
+      "label": "T5",
+      "x": 200,
+      "y": 150,
+      "capacity": 8,
+      "status": "cleaning",
+      "shape": "rectangle"
+    }
+  ],
+  "lang": "lang",
+  "moveEvent": "MOVE_TABLE",
+  "onMove": false,
+  "onSelect": false,
+  "role": "alert",
+  "selectEvent": "SELECT_TABLE",
+  "selectedId": "t1",
+  "skeleton": "header",
+  "tabIndex": -1,
+  "width": 420
+}

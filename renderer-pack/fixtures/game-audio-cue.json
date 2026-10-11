@@ -1,0 +1,20 @@
+{
+  "type": "game-audio-cue",
+  "baseUrl": "baseUrl",
+  "cue": "coin",
+  "cueSeq": 1,
+  "manifest": {
+    "coin": {
+      "path": "sfx/coin.mp3",
+      "volume": 0.9
+    },
+    "theme": {
+      "path": "music/theme.mp3",
+      "loop": true,
+      "crossfade": true
+    }
+  },
+  "music": "theme",
+  "muted": false,
+  "volume": 0.8
+}

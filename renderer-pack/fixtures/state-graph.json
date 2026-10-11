@@ -1,0 +1,51 @@
+{
+  "type": "state-graph",
+  "addingFrom": "",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "currentState": "running",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "height": 300,
+  "initialState": "idle",
+  "lang": "lang",
+  "nodeClickEvent": "PICK_STATE",
+  "role": "alert",
+  "selectedState": "",
+  "skeleton": "header",
+  "states": [
+    "idle",
+    "running",
+    "done"
+  ],
+  "tabIndex": -1,
+  "transitions": [
+    {
+      "from": "idle",
+      "to": "running",
+      "event": "START"
+    },
+    {
+      "from": "running",
+      "to": "done",
+      "event": "FINISH",
+      "guardHint": "ready"
+    },
+    {
+      "from": "done",
+      "to": "idle",
+      "event": "RESET"
+    }
+  ],
+  "width": 420
+}

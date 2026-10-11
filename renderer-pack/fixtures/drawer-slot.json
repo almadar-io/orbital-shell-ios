@@ -1,0 +1,14 @@
+{
+  "type": "drawer-slot",
+  "children": "children",
+  "className": "className",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": "entity",
+  "isLoading": false,
+  "position": "right",
+  "size": "md",
+  "skeleton": "header",
+  "sourceTrait": "sourceTrait",
+  "title": "title"
+}

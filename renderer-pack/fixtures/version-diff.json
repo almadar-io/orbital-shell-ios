@@ -1,0 +1,125 @@
+{
+  "type": "version-diff",
+  "afterId": "afterId",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "beforeId": "beforeId",
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "hunks": [
+    {
+      "header": "header 1",
+      "lines": [
+        {
+          "afterLineNumber": 1,
+          "beforeLineNumber": 1,
+          "content": "content 1",
+          "type": "added"
+        },
+        {
+          "afterLineNumber": 2,
+          "beforeLineNumber": 2,
+          "content": "content 2",
+          "type": "added"
+        },
+        {
+          "afterLineNumber": 3,
+          "beforeLineNumber": 3,
+          "content": "content 3",
+          "type": "added"
+        }
+      ]
+    },
+    {
+      "header": "header 2",
+      "lines": [
+        {
+          "afterLineNumber": 1,
+          "beforeLineNumber": 1,
+          "content": "content 1",
+          "type": "added"
+        },
+        {
+          "afterLineNumber": 2,
+          "beforeLineNumber": 2,
+          "content": "content 2",
+          "type": "added"
+        },
+        {
+          "afterLineNumber": 3,
+          "beforeLineNumber": 3,
+          "content": "content 3",
+          "type": "added"
+        }
+      ]
+    },
+    {
+      "header": "header 3",
+      "lines": [
+        {
+          "afterLineNumber": 1,
+          "beforeLineNumber": 1,
+          "content": "content 1",
+          "type": "added"
+        },
+        {
+          "afterLineNumber": 2,
+          "beforeLineNumber": 2,
+          "content": "content 2",
+          "type": "added"
+        },
+        {
+          "afterLineNumber": 3,
+          "beforeLineNumber": 3,
+          "content": "content 3",
+          "type": "added"
+        }
+      ]
+    }
+  ],
+  "lang": "lang",
+  "language": "language",
+  "onRevert": false,
+  "onSelectAfter": false,
+  "onSelectBefore": false,
+  "revertEvent": "REVERTEVENT",
+  "revisions": [
+    {
+      "author": "author 1",
+      "content": "content 1",
+      "id": "id 1",
+      "label": "label 1",
+      "timestamp": "timestamp 1"
+    },
+    {
+      "author": "author 2",
+      "content": "content 2",
+      "id": "id 2",
+      "label": "label 2",
+      "timestamp": "timestamp 2"
+    },
+    {
+      "author": "author 3",
+      "content": "content 3",
+      "id": "id 3",
+      "label": "label 3",
+      "timestamp": "timestamp 3"
+    }
+  ],
+  "role": "alert",
+  "selectAfterEvent": "SELECTAFTEREVENT",
+  "selectBeforeEvent": "SELECTBEFOREEVENT",
+  "skeleton": "header",
+  "tabIndex": -1,
+  "view": "side-by-side"
+}

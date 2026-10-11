@@ -1,0 +1,36 @@
+{
+  "type": "input",
+  "action": "ACTION",
+  "className": "className",
+  "clearable": false,
+  "disabled": false,
+  "enter": "none",
+  "enterDelay": 1,
+  "error": "error",
+  "helperText": "helperText",
+  "icon": "star",
+  "inputType": "text",
+  "label": "label",
+  "leftIcon": "star",
+  "onChange": "ONCHANGE",
+  "onClear": "onClear",
+  "options": [
+    {
+      "label": "label 1",
+      "value": "value 1"
+    },
+    {
+      "label": "label 2",
+      "value": "value 2"
+    },
+    {
+      "label": "label 3",
+      "value": "value 3"
+    }
+  ],
+  "placeholder": "placeholder",
+  "rightIcon": "star",
+  "rows": 3,
+  "skeleton": "header",
+  "value": "value"
+}

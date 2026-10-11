@@ -1,0 +1,13 @@
+{
+  "type": "edge-decoration",
+  "className": "className",
+  "color": "primary",
+  "enter": "none",
+  "enterDelay": 1,
+  "opacity": 0.15,
+  "side": "both",
+  "skeleton": "header",
+  "strokeWidth": 0.5,
+  "variant": "arch",
+  "width": 15
+}

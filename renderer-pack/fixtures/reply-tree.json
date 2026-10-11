@@ -1,0 +1,63 @@
+{
+  "type": "reply-tree",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "continueThreadEvent": "CONTINUETHREADEVENT",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "flagEvent": "FLAGEVENT",
+  "lang": "lang",
+  "maxDepth": 6,
+  "nodes": [
+    {
+      "authorAvatarUrl": "authorAvatarUrl 1",
+      "authorName": "authorName 1",
+      "collapsed": false,
+      "content": "content 1",
+      "postedAt": "postedAt 1",
+      "replies": [],
+      "userVote": "up",
+      "voteCount": 1
+    },
+    {
+      "authorAvatarUrl": "authorAvatarUrl 2",
+      "authorName": "authorName 2",
+      "collapsed": false,
+      "content": "content 2",
+      "postedAt": "postedAt 2",
+      "replies": [],
+      "userVote": "up",
+      "voteCount": 2
+    },
+    {
+      "authorAvatarUrl": "authorAvatarUrl 3",
+      "authorName": "authorName 3",
+      "collapsed": false,
+      "content": "content 3",
+      "postedAt": "postedAt 3",
+      "replies": [],
+      "userVote": "up",
+      "voteCount": 3
+    }
+  ],
+  "onContinueThread": false,
+  "onFlag": false,
+  "onReply": false,
+  "onVote": false,
+  "replyEvent": "REPLYEVENT",
+  "role": "alert",
+  "showActions": true,
+  "skeleton": "header",
+  "tabIndex": -1,
+  "voteEvent": "VOTEEVENT"
+}

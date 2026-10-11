@@ -1,0 +1,369 @@
+{
+  "type": "wizard-container",
+  "allowBack": true,
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "backEvent": "BACKEVENT",
+  "className": "className",
+  "compact": false,
+  "completeEvent": "COMPLETEEVENT",
+  "currentStep": "currentStep",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "isLoading": false,
+  "lang": "lang",
+  "nextEvent": "NEXTEVENT",
+  "onComplete": false,
+  "onStepChange": false,
+  "role": "alert",
+  "showProgress": true,
+  "skeleton": "header",
+  "steps": [
+    {
+      "content": "content 1",
+      "contextMenu": [
+        "contextMenu 1",
+        "contextMenu 2",
+        "contextMenu 3"
+      ],
+      "description": "description 1",
+      "entityMapping": {
+        "entity": "entity 1",
+        "idField": "idField 1",
+        "mode": "mode 1",
+        "parentField": "parentField 1"
+      },
+      "globalVariablesRequired": [
+        "globalVariablesRequired 1",
+        "globalVariablesRequired 2",
+        "globalVariablesRequired 3"
+      ],
+      "globalVariablesSet": [
+        "globalVariablesSet 1",
+        "globalVariablesSet 2",
+        "globalVariablesSet 3"
+      ],
+      "id": "id 1",
+      "isValid": false,
+      "lawReferences": [
+        {
+          "article": "article 1",
+          "description": "description 1",
+          "law": "law 1"
+        },
+        {
+          "article": "article 2",
+          "description": "description 2",
+          "law": "law 2"
+        },
+        {
+          "article": "article 3",
+          "description": "description 3",
+          "law": "law 3"
+        }
+      ],
+      "localVariables": [
+        "localVariables 1",
+        "localVariables 2",
+        "localVariables 3"
+      ],
+      "name": "name 1",
+      "optional": false,
+      "phase": "phase 1",
+      "sections": [
+        {
+          "addButtonLabel": "addButtonLabel 1",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 1",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 1",
+          "minItems": 1,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 1"
+        },
+        {
+          "addButtonLabel": "addButtonLabel 2",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 2",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 2",
+          "minItems": 2,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 2"
+        },
+        {
+          "addButtonLabel": "addButtonLabel 3",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 3",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 3",
+          "minItems": 3,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 3"
+        }
+      ],
+      "tabId": "tabId 1",
+      "title": "title 1",
+      "validationRules": [
+        {
+          "condition": "condition",
+          "message": "message 1"
+        },
+        {
+          "condition": "condition",
+          "message": "message 2"
+        },
+        {
+          "condition": "condition",
+          "message": "message 3"
+        }
+      ]
+    },
+    {
+      "content": "content 2",
+      "contextMenu": [
+        "contextMenu 1",
+        "contextMenu 2",
+        "contextMenu 3"
+      ],
+      "description": "description 2",
+      "entityMapping": {
+        "entity": "entity 2",
+        "idField": "idField 2",
+        "mode": "mode 2",
+        "parentField": "parentField 2"
+      },
+      "globalVariablesRequired": [
+        "globalVariablesRequired 1",
+        "globalVariablesRequired 2",
+        "globalVariablesRequired 3"
+      ],
+      "globalVariablesSet": [
+        "globalVariablesSet 1",
+        "globalVariablesSet 2",
+        "globalVariablesSet 3"
+      ],
+      "id": "id 2",
+      "isValid": false,
+      "lawReferences": [
+        {
+          "article": "article 1",
+          "description": "description 1",
+          "law": "law 1"
+        },
+        {
+          "article": "article 2",
+          "description": "description 2",
+          "law": "law 2"
+        },
+        {
+          "article": "article 3",
+          "description": "description 3",
+          "law": "law 3"
+        }
+      ],
+      "localVariables": [
+        "localVariables 1",
+        "localVariables 2",
+        "localVariables 3"
+      ],
+      "name": "name 2",
+      "optional": false,
+      "phase": "phase 2",
+      "sections": [
+        {
+          "addButtonLabel": "addButtonLabel 1",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 1",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 1",
+          "minItems": 1,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 1"
+        },
+        {
+          "addButtonLabel": "addButtonLabel 2",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 2",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 2",
+          "minItems": 2,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 2"
+        },
+        {
+          "addButtonLabel": "addButtonLabel 3",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 3",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 3",
+          "minItems": 3,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 3"
+        }
+      ],
+      "tabId": "tabId 2",
+      "title": "title 2",
+      "validationRules": [
+        {
+          "condition": "condition",
+          "message": "message 1"
+        },
+        {
+          "condition": "condition",
+          "message": "message 2"
+        },
+        {
+          "condition": "condition",
+          "message": "message 3"
+        }
+      ]
+    },
+    {
+      "content": "content 3",
+      "contextMenu": [
+        "contextMenu 1",
+        "contextMenu 2",
+        "contextMenu 3"
+      ],
+      "description": "description 3",
+      "entityMapping": {
+        "entity": "entity 3",
+        "idField": "idField 3",
+        "mode": "mode 3",
+        "parentField": "parentField 3"
+      },
+      "globalVariablesRequired": [
+        "globalVariablesRequired 1",
+        "globalVariablesRequired 2",
+        "globalVariablesRequired 3"
+      ],
+      "globalVariablesSet": [
+        "globalVariablesSet 1",
+        "globalVariablesSet 2",
+        "globalVariablesSet 3"
+      ],
+      "id": "id 3",
+      "isValid": false,
+      "lawReferences": [
+        {
+          "article": "article 1",
+          "description": "description 1",
+          "law": "law 1"
+        },
+        {
+          "article": "article 2",
+          "description": "description 2",
+          "law": "law 2"
+        },
+        {
+          "article": "article 3",
+          "description": "description 3",
+          "law": "law 3"
+        }
+      ],
+      "localVariables": [
+        "localVariables 1",
+        "localVariables 2",
+        "localVariables 3"
+      ],
+      "name": "name 3",
+      "optional": false,
+      "phase": "phase 3",
+      "sections": [
+        {
+          "addButtonLabel": "addButtonLabel 1",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 1",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 1",
+          "minItems": 1,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 1"
+        },
+        {
+          "addButtonLabel": "addButtonLabel 2",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 2",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 2",
+          "minItems": 2,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 2"
+        },
+        {
+          "addButtonLabel": "addButtonLabel 3",
+          "condition": "condition",
+          "dataSource": {},
+          "description": "description 3",
+          "fields": [],
+          "hiddenCalculations": [],
+          "id": "id 3",
+          "minItems": 3,
+          "readOnly": false,
+          "repeatable": false,
+          "subsections": [],
+          "title": "title 3"
+        }
+      ],
+      "tabId": "tabId 3",
+      "title": "title 3",
+      "validationRules": [
+        {
+          "condition": "condition",
+          "message": "message 1"
+        },
+        {
+          "condition": "condition",
+          "message": "message 2"
+        },
+        {
+          "condition": "condition",
+          "message": "message 3"
+        }
+      ]
+    }
+  ],
+  "tabIndex": -1
+}

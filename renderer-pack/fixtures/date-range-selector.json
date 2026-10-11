@@ -1,0 +1,37 @@
+{
+  "type": "date-range-selector",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "lang": "lang",
+  "onSelect": false,
+  "options": [
+    {
+      "label": "label 1",
+      "value": "value 1"
+    },
+    {
+      "label": "label 2",
+      "value": "value 2"
+    },
+    {
+      "label": "label 3",
+      "value": "value 3"
+    }
+  ],
+  "role": "alert",
+  "selected": "month",
+  "skeleton": "header",
+  "tabIndex": -1
+}

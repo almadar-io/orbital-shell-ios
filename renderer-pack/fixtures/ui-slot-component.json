@@ -1,0 +1,19 @@
+{
+  "type": "ui-slot-component",
+  "awaitingSkeleton": {},
+  "children": "children",
+  "className": "className",
+  "draggable": false,
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": "entity",
+  "fallback": "fallback",
+  "isLoading": false,
+  "mode": "replace",
+  "pattern": "pattern",
+  "portal": false,
+  "position": "left",
+  "skeleton": "header",
+  "slot": {},
+  "sourceTrait": "sourceTrait"
+}

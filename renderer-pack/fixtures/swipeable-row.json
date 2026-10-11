@@ -1,0 +1,76 @@
+{
+  "type": "swipeable-row",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "children": "children",
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "itemData": {},
+  "lang": "lang",
+  "leftActions": [
+    {
+      "event": "EVENT",
+      "eventPayload": {},
+      "icon": "star",
+      "label": "label 1",
+      "variant": "primary",
+      "when": "when"
+    },
+    {
+      "event": "EVENT",
+      "eventPayload": {},
+      "icon": "bell",
+      "label": "label 2",
+      "variant": "primary",
+      "when": "when"
+    },
+    {
+      "event": "EVENT",
+      "eventPayload": {},
+      "icon": "heart",
+      "label": "label 3",
+      "variant": "primary",
+      "when": "when"
+    }
+  ],
+  "rightActions": [
+    {
+      "event": "EVENT",
+      "eventPayload": {},
+      "icon": "star",
+      "label": "label 1",
+      "variant": "primary",
+      "when": "when"
+    },
+    {
+      "event": "EVENT",
+      "eventPayload": {},
+      "icon": "bell",
+      "label": "label 2",
+      "variant": "primary",
+      "when": "when"
+    },
+    {
+      "event": "EVENT",
+      "eventPayload": {},
+      "icon": "heart",
+      "label": "label 3",
+      "variant": "primary",
+      "when": "when"
+    }
+  ],
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1,
+  "threshold": 80
+}

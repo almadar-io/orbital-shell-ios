@@ -1,0 +1,278 @@
+{
+  "type": "game-hud",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dir": "ltr",
+  "elements": [
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 1",
+        "dimension": "2d",
+        "name": "name 1",
+        "role": "role 1",
+        "sprite": "sprite 1",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 1",
+        "url": "url",
+        "variant": "variant 1"
+      },
+      "bind": "bind 1",
+      "format": "format 1",
+      "icon": "star",
+      "label": "label 1",
+      "max": 1,
+      "position": "position 1",
+      "type": "type 1",
+      "value": "value 1"
+    },
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 2",
+        "dimension": "2d",
+        "name": "name 2",
+        "role": "role 2",
+        "sprite": "sprite 2",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 2",
+        "url": "url",
+        "variant": "variant 2"
+      },
+      "bind": "bind 2",
+      "format": "format 2",
+      "icon": "bell",
+      "label": "label 2",
+      "max": 2,
+      "position": "position 2",
+      "type": "type 2",
+      "value": "value 2"
+    },
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 3",
+        "dimension": "2d",
+        "name": "name 3",
+        "role": "role 3",
+        "sprite": "sprite 3",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 3",
+        "url": "url",
+        "variant": "variant 3"
+      },
+      "bind": "bind 3",
+      "format": "format 3",
+      "icon": "heart",
+      "label": "label 3",
+      "max": 3,
+      "position": "position 3",
+      "type": "type 3",
+      "value": "value 3"
+    }
+  ],
+  "enter": "none",
+  "enterDelay": 1,
+  "items": [
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 1",
+        "dimension": "2d",
+        "name": "name 1",
+        "role": "role 1",
+        "sprite": "sprite 1",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 1",
+        "url": "url",
+        "variant": "variant 1"
+      },
+      "className": "className 1",
+      "field": "field 1",
+      "format": "format 1",
+      "icon": "star",
+      "iconUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 1",
+        "dimension": "2d",
+        "name": "name 1",
+        "role": "role 1",
+        "sprite": "sprite 1",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 1",
+        "url": "url",
+        "variant": "variant 1"
+      },
+      "label": "label 1",
+      "max": 1,
+      "source": "source 1",
+      "value": "value 1",
+      "variant": "variant 1"
+    },
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 2",
+        "dimension": "2d",
+        "name": "name 2",
+        "role": "role 2",
+        "sprite": "sprite 2",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 2",
+        "url": "url",
+        "variant": "variant 2"
+      },
+      "className": "className 2",
+      "field": "field 2",
+      "format": "format 2",
+      "icon": "bell",
+      "iconUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 2",
+        "dimension": "2d",
+        "name": "name 2",
+        "role": "role 2",
+        "sprite": "sprite 2",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 2",
+        "url": "url",
+        "variant": "variant 2"
+      },
+      "label": "label 2",
+      "max": 2,
+      "source": "source 2",
+      "value": "value 2",
+      "variant": "variant 2"
+    },
+    {
+      "assetUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 3",
+        "dimension": "2d",
+        "name": "name 3",
+        "role": "role 3",
+        "sprite": "sprite 3",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 3",
+        "url": "url",
+        "variant": "variant 3"
+      },
+      "className": "className 3",
+      "field": "field 3",
+      "format": "format 3",
+      "icon": "heart",
+      "iconUrl": {
+        "animations": [
+          "animations 1",
+          "animations 2",
+          "animations 3"
+        ],
+        "aspect": "1:1",
+        "atlas": "atlas",
+        "category": "category 3",
+        "dimension": "2d",
+        "name": "name 3",
+        "role": "role 3",
+        "sprite": "sprite 3",
+        "style": "pixel",
+        "thumbnailUrl": "thumbnailUrl 3",
+        "url": "url",
+        "variant": "variant 3"
+      },
+      "label": "label 3",
+      "max": 3,
+      "source": "source 3",
+      "value": "value 3",
+      "variant": "variant 3"
+    }
+  ],
+  "lang": "lang",
+  "position": "top",
+  "role": "alert",
+  "size": "md",
+  "skeleton": "header",
+  "stats": [
+    {
+      "label": "HP",
+      "value": 75,
+      "max": 100,
+      "format": "bar",
+      "variant": "danger",
+      "icon": "heart"
+    },
+    {
+      "label": "Score",
+      "value": 4200,
+      "format": "number",
+      "variant": "warning",
+      "icon": "star"
+    },
+    {
+      "label": "Level",
+      "value": 4,
+      "format": "number",
+      "variant": "default",
+      "icon": "trophy"
+    }
+  ],
+  "tabIndex": -1,
+  "transparent": true,
+  "variant": "floating"
+}

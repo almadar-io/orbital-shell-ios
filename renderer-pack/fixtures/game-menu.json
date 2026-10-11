@@ -1,0 +1,83 @@
+{
+  "type": "game-menu",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "background": "background",
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "lang": "lang",
+  "menuItems": [
+    {
+      "disabled": false,
+      "event": "EVENT",
+      "id": "id 1",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "subLabel": "subLabel 1",
+      "variant": "variant 1"
+    },
+    {
+      "disabled": false,
+      "event": "EVENT",
+      "id": "id 2",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "subLabel": "subLabel 2",
+      "variant": "variant 2"
+    },
+    {
+      "disabled": false,
+      "event": "EVENT",
+      "id": "id 3",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "subLabel": "subLabel 3",
+      "variant": "variant 3"
+    }
+  ],
+  "onSelect": false,
+  "options": [
+    {
+      "disabled": false,
+      "event": "EVENT",
+      "id": "id 1",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "subLabel": "subLabel 1",
+      "variant": "variant 1"
+    },
+    {
+      "disabled": false,
+      "event": "EVENT",
+      "id": "id 2",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "subLabel": "subLabel 2",
+      "variant": "variant 2"
+    },
+    {
+      "disabled": false,
+      "event": "EVENT",
+      "id": "id 3",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "subLabel": "subLabel 3",
+      "variant": "variant 3"
+    }
+  ],
+  "role": "alert",
+  "skeleton": "header",
+  "subtitle": "subtitle",
+  "tabIndex": -1,
+  "title": "title"
+}

@@ -1,0 +1,124 @@
+{
+  "type": "algo-graph-canvas",
+  "animate": false,
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "",
+  "aria-labelledby": "",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "backgroundColor": "",
+  "className": "",
+  "dir": "ltr",
+  "edges": [
+    {
+      "from": "A",
+      "to": "B",
+      "directed": false,
+      "label": "",
+      "state": "tree"
+    },
+    {
+      "from": "A",
+      "to": "C",
+      "directed": false,
+      "label": "",
+      "state": "tree"
+    },
+    {
+      "from": "B",
+      "to": "D",
+      "directed": false,
+      "label": "",
+      "state": "default"
+    },
+    {
+      "from": "B",
+      "to": "E",
+      "directed": false,
+      "label": "",
+      "state": "default"
+    },
+    {
+      "from": "C",
+      "to": "F",
+      "directed": false,
+      "label": "",
+      "state": "default"
+    },
+    {
+      "from": "C",
+      "to": "G",
+      "directed": false,
+      "label": "",
+      "state": "default"
+    },
+    {
+      "from": "E",
+      "to": "F",
+      "directed": false,
+      "label": "",
+      "state": "default"
+    }
+  ],
+  "enter": "none",
+  "enterDelay": 1,
+  "height": 300,
+  "interactive": false,
+  "isLoading": false,
+  "keyMap": {},
+  "keyUpMap": {},
+  "lang": "",
+  "layout": "circle",
+  "nodes": [
+    {
+      "id": "A",
+      "label": "A",
+      "state": "visited"
+    },
+    {
+      "id": "B",
+      "label": "B",
+      "state": "current"
+    },
+    {
+      "id": "C",
+      "label": "C",
+      "state": "frontier"
+    },
+    {
+      "id": "D",
+      "label": "D",
+      "state": "frontier"
+    },
+    {
+      "id": "E",
+      "label": "E",
+      "state": "unvisited"
+    },
+    {
+      "id": "F",
+      "label": "F",
+      "state": "unvisited"
+    },
+    {
+      "id": "G",
+      "label": "G",
+      "state": "unvisited"
+    }
+  ],
+  "onNodeClick": false,
+  "onShapeClick": false,
+  "role": "alert",
+  "root": "",
+  "series": [],
+  "shapes": [],
+  "skeleton": "header",
+  "tabIndex": -1,
+  "title": "",
+  "width": 600
+}

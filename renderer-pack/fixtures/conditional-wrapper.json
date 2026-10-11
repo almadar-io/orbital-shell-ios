@@ -1,0 +1,13 @@
+{
+  "type": "conditional-wrapper",
+  "animate": false,
+  "children": "children",
+  "condition": true,
+  "context": {
+    "entity": {},
+    "formValues": {},
+    "globalVariables": {},
+    "localVariables": {}
+  },
+  "fallback": null
+}

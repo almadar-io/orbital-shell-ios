@@ -1,0 +1,20 @@
+// Clang module map for the orbital-game-renderer static library.
+//
+// xcodegen / project.yml links liborbital_game_renderer.a from the Rust build
+// output (CARGO_BUILD_DIR/aarch64-apple-ios/release/).  This module map makes
+// the C ABI symbols available as a Swift-importable module so that
+// OrbitalGameBridge.swift can use @_silgen_name without a bridging header.
+//
+// In practice xcodegen adds:
+//   OTHER_LDFLAGS: -lorbital_game_renderer
+//   LIBRARY_SEARCH_PATHS: $(CARGO_BUILD_DIR)/aarch64-apple-ios/release
+//   SWIFT_INCLUDE_PATHS: $(SRCROOT)/Sources/OrbitalApp/Bridge
+//
+// The @_silgen_name declarations in OrbitalGameBridge.swift bypass the need
+// to import this module at the call site — it is included here for
+// documentation and for any future Objective-C consumers.
+
+module OrbitalGameRenderer {
+    header "orbital_game_renderer.h"
+    export *
+}

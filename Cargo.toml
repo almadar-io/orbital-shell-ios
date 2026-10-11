@@ -1,0 +1,19 @@
+[package]
+name = "orbital-shell-ios"
+version = "18.0.0"
+edition = "2021"
+license = "BUSL-1.1"
+repository = "https://github.com/almadar-io/orbital-shell-ios"
+description = "Native iOS shell for the Orbital compiler (SwiftUI)."
+
+[dependencies]
+orbital-core = { git = "https://github.com/almadar-io/orbital-core", branch = "main" }
+orbital-game-renderer = { git = "https://github.com/almadar-io/orbital-game-renderer", branch = "main" }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+serde_json = "1.0"
+orbital-ffi = { git = "https://github.com/almadar-io/orbital-ffi", branch = "main" }

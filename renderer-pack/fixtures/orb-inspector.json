@@ -1,0 +1,143 @@
+{
+  "type": "orb-inspector",
+  "defaultTab": "inspector",
+  "editable": false,
+  "elementAccess": false,
+  "node": {
+    "_fullSchema": "_fullSchema",
+    "_mockData": {},
+    "bandCount": 1,
+    "bandKind": "connected",
+    "cardLabel": "screen",
+    "cardWidth": 1,
+    "dependencyColumn": "app",
+    "dependencyRole": "selected",
+    "effectTypes": [
+      "effectTypes 1",
+      "effectTypes 2",
+      "effectTypes 3"
+    ],
+    "emits": [
+      "emits 1",
+      "emits 2",
+      "emits 3"
+    ],
+    "enteredBy": [
+      "enteredBy 1",
+      "enteredBy 2",
+      "enteredBy 3"
+    ],
+    "entityName": "entityName",
+    "eventSources": [
+      {
+        "event": "event 1",
+        "label": "label 1",
+        "path": "path 1",
+        "patternType": "patternType 1",
+        "payloadFields": [
+          {},
+          {},
+          {}
+        ],
+        "positionHint": 1
+      },
+      {
+        "event": "event 2",
+        "label": "label 2",
+        "path": "path 2",
+        "patternType": "patternType 2",
+        "payloadFields": [
+          {},
+          {},
+          {}
+        ],
+        "positionHint": 2
+      },
+      {
+        "event": "event 3",
+        "label": "label 3",
+        "path": "path 3",
+        "patternType": "patternType 3",
+        "payloadFields": [
+          {},
+          {},
+          {}
+        ],
+        "positionHint": 3
+      }
+    ],
+    "fieldCount": 1,
+    "flowRenderPieces": 1,
+    "flowTraits": 1,
+    "focused": false,
+    "fromState": "fromState",
+    "guard": "guard",
+    "kind": "trait-card",
+    "layer": "layer",
+    "linkedEntity": "linkedEntity",
+    "listens": [
+      "listens 1",
+      "listens 2",
+      "listens 3"
+    ],
+    "orbitalName": "orbitalName",
+    "pageRoutes": [
+      "pageRoutes 1",
+      "pageRoutes 2",
+      "pageRoutes 3"
+    ],
+    "patterns": [
+      {
+        "pattern": "pattern",
+        "slot": "slot 1"
+      },
+      {
+        "pattern": "pattern",
+        "slot": "slot 2"
+      },
+      {
+        "pattern": "pattern",
+        "slot": "slot 3"
+      }
+    ],
+    "persistence": "persistence",
+    "sourceSchemaName": "sourceSchemaName",
+    "stateName": "stateName",
+    "stateRole": "initial",
+    "status": "idle",
+    "toState": "toState",
+    "traitCount": 1,
+    "traitName": "traitName",
+    "transitionEvent": "transitionEvent",
+    "transitions": [
+      {
+        "event": "event 1",
+        "fromState": "fromState 1",
+        "toState": "toState 1"
+      },
+      {
+        "event": "event 2",
+        "fromState": "fromState 2",
+        "toState": "toState 2"
+      },
+      {
+        "event": "event 3",
+        "fromState": "fromState 3",
+        "toState": "toState 3"
+      }
+    ],
+    "unitMetric": "unitMetric",
+    "unitStatus": "ok",
+    "wireEvents": [
+      "wireEvents 1",
+      "wireEvents 2",
+      "wireEvents 3"
+    ]
+  },
+  "onClose": false,
+  "onSchemaChange": false,
+  "onTabChange": false,
+  "schema": "schema",
+  "themeManifest": {},
+  "userType": "builder"
+}

@@ -1,0 +1,39 @@
+{
+  "type": "layers-panel",
+  "onReorder": false,
+  "onSelect": false,
+  "schema": {
+    "orbitals": [
+      {
+        "name": "Inventory",
+        "traits": [
+          {
+            "name": "InventoryBrowse"
+          },
+          {
+            "ref": "std-filter"
+          }
+        ],
+        "pages": [
+          {
+            "path": "/inventory"
+          }
+        ]
+      },
+      {
+        "name": "Orders",
+        "traits": [
+          {
+            "name": "OrderFlow"
+          }
+        ],
+        "pages": [
+          {
+            "path": "/orders"
+          }
+        ]
+      }
+    ]
+  },
+  "selectedId": "Inventory"
+}

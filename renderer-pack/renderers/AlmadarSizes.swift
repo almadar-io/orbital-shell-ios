@@ -1,0 +1,94 @@
+import CoreGraphics
+
+// Tailwind maxWidth / width / minWidth scales resolved from @almadar/ui tailwind-preset.cjs (rem x 16 -> dp/pt, px as-is).
+// Only static length entries are emitted. Keyword and relative entries (none, full, min, max, fit, prose, screen,
+// auto, percentages, var(--token, px) entries) are not lengths: `full` means "no cap" and is expressed at the call
+// site (Dp.Infinity / .infinity), never as a member here.
+enum AlmadarSizes {
+    static let maxW14: CGFloat = 56
+    static let maxW16: CGFloat = 64
+    static let maxW20: CGFloat = 80
+    static let maxW24: CGFloat = 96
+    static let maxW28: CGFloat = 112
+    static let maxW32: CGFloat = 128
+    static let maxW36: CGFloat = 144
+    static let maxW40: CGFloat = 160
+    static let maxW44: CGFloat = 176
+    static let maxW48: CGFloat = 192
+    static let maxW52: CGFloat = 208
+    static let maxW56: CGFloat = 224
+    static let maxW60: CGFloat = 240
+    static let maxW64: CGFloat = 256
+    static let maxW72: CGFloat = 288
+    static let maxW80: CGFloat = 320
+    static let maxW96: CGFloat = 384
+    static let maxWPx: CGFloat = 1
+    static let maxW0_5: CGFloat = 2
+    static let maxW1_5: CGFloat = 6
+    static let maxW2_5: CGFloat = 10
+    static let maxW3_5: CGFloat = 14
+    static let maxWXs: CGFloat = 320
+    static let maxWSm: CGFloat = 384
+    static let maxWMd: CGFloat = 448
+    static let maxWLg: CGFloat = 512
+    static let maxWXl: CGFloat = 576
+    static let maxW2xl: CGFloat = 672
+    static let maxW3xl: CGFloat = 768
+    static let maxW4xl: CGFloat = 896
+    static let maxW5xl: CGFloat = 1024
+    static let maxW6xl: CGFloat = 1152
+    static let maxW7xl: CGFloat = 1280
+    static let maxWScreenSm: CGFloat = 640
+    static let maxWScreenMd: CGFloat = 768
+    static let maxWScreenLg: CGFloat = 1024
+    static let maxWScreenXl: CGFloat = 1280
+    static let maxWScreen2xl: CGFloat = 1536
+    static let w14: CGFloat = 56
+    static let w16: CGFloat = 64
+    static let w20: CGFloat = 80
+    static let w24: CGFloat = 96
+    static let w28: CGFloat = 112
+    static let w32: CGFloat = 128
+    static let w36: CGFloat = 144
+    static let w40: CGFloat = 160
+    static let w44: CGFloat = 176
+    static let w48: CGFloat = 192
+    static let w52: CGFloat = 208
+    static let w56: CGFloat = 224
+    static let w60: CGFloat = 240
+    static let w64: CGFloat = 256
+    static let w72: CGFloat = 288
+    static let w80: CGFloat = 320
+    static let w96: CGFloat = 384
+    static let wPx: CGFloat = 1
+    static let w0_5: CGFloat = 2
+    static let w1_5: CGFloat = 6
+    static let w2_5: CGFloat = 10
+    static let w3_5: CGFloat = 14
+    static let minW14: CGFloat = 56
+    static let minW16: CGFloat = 64
+    static let minW20: CGFloat = 80
+    static let minW24: CGFloat = 96
+    static let minW28: CGFloat = 112
+    static let minW32: CGFloat = 128
+    static let minW36: CGFloat = 144
+    static let minW40: CGFloat = 160
+    static let minW44: CGFloat = 176
+    static let minW48: CGFloat = 192
+    static let minW52: CGFloat = 208
+    static let minW56: CGFloat = 224
+    static let minW60: CGFloat = 240
+    static let minW64: CGFloat = 256
+    static let minW72: CGFloat = 288
+    static let minW80: CGFloat = 320
+    static let minW96: CGFloat = 384
+    static let minWPx: CGFloat = 1
+    static let minW0_5: CGFloat = 2
+    static let minW1_5: CGFloat = 6
+    static let minW2_5: CGFloat = 10
+    static let minW3_5: CGFloat = 14
+    static let minWModalSm: CGFloat = 400
+    static let minWModalMd: CGFloat = 520
+    static let minWModalLg: CGFloat = 600
+    static let minWModalXl: CGFloat = 700
+}

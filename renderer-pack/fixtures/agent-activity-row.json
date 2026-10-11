@@ -1,0 +1,15 @@
+{
+  "type": "agent-activity-row",
+  "activity": {
+    "content": "content",
+    "isStreaming": false,
+    "role": "user",
+    "timestamp": 1,
+    "type": "message"
+  },
+  "facts": {
+    "readyCount": 1,
+    "settled": false
+  },
+  "onJump": false
+}

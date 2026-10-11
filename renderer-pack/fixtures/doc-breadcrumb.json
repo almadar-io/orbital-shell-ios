@@ -1,0 +1,35 @@
+{
+  "type": "doc-breadcrumb",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "items": [
+    {
+      "href": "href 1",
+      "label": "label 1"
+    },
+    {
+      "href": "href 2",
+      "label": "label 2"
+    },
+    {
+      "href": "href 3",
+      "label": "label 3"
+    }
+  ],
+  "lang": "lang",
+  "role": "alert",
+  "skeleton": "header",
+  "tabIndex": -1
+}

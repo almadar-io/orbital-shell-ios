@@ -1,0 +1,43 @@
+{
+  "type": "filter-group",
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "className": "className",
+  "clearEvent": "CLEAREVENT",
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": "note",
+  "event": "EVENT",
+  "filters": [
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "all",
+        "draft",
+        "archived"
+      ]
+    }
+  ],
+  "isLoading": false,
+  "lang": "lang",
+  "look": "toolbar",
+  "onClearAll": false,
+  "onFilterChange": false,
+  "query": "query",
+  "role": "alert",
+  "showIcon": true,
+  "skeleton": "header",
+  "tabIndex": -1,
+  "variant": "default"
+}

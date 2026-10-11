@@ -1,0 +1,98 @@
+{
+  "type": "media-gallery",
+  "actions": [
+    {
+      "event": "EVENT",
+      "label": "label 1",
+      "navigatesTo": "navigatesTo 1",
+      "variant": "primary"
+    },
+    {
+      "event": "EVENT",
+      "label": "label 2",
+      "navigatesTo": "navigatesTo 2",
+      "variant": "primary"
+    },
+    {
+      "event": "EVENT",
+      "label": "label 3",
+      "navigatesTo": "navigatesTo 3",
+      "variant": "primary"
+    }
+  ],
+  "activeFilters": {},
+  "aria-busy": false,
+  "aria-current": "page",
+  "aria-describedby": "aria-describedby",
+  "aria-expanded": false,
+  "aria-hidden": false,
+  "aria-label": "aria-label",
+  "aria-labelledby": "aria-labelledby",
+  "aria-live": "off",
+  "aria-pressed": "true",
+  "aria-selected": false,
+  "aspectRatio": "square",
+  "captionField": "caption",
+  "className": "className",
+  "columns": 3,
+  "dir": "ltr",
+  "enter": "none",
+  "enterDelay": 1,
+  "entity": [],
+  "isLoading": false,
+  "items": [
+    {
+      "alt": "alt 1",
+      "caption": "caption 1",
+      "fileSize": "fileSize 1",
+      "id": "id 1",
+      "mediaType": "image",
+      "src": "src",
+      "thumbnail": "thumbnail"
+    },
+    {
+      "alt": "alt 2",
+      "caption": "caption 2",
+      "fileSize": "fileSize 2",
+      "id": "id 2",
+      "mediaType": "image",
+      "src": "src",
+      "thumbnail": "thumbnail"
+    },
+    {
+      "alt": "alt 3",
+      "caption": "caption 3",
+      "fileSize": "fileSize 3",
+      "id": "id 3",
+      "mediaType": "image",
+      "src": "src",
+      "thumbnail": "thumbnail"
+    }
+  ],
+  "lang": "lang",
+  "page": 1,
+  "pageSize": 1,
+  "role": "alert",
+  "searchValue": "searchValue",
+  "selectable": false,
+  "selectedIds": [
+    "selectedIds 1",
+    "selectedIds 2",
+    "selectedIds 3"
+  ],
+  "selectedItems": [
+    "selectedItems 1",
+    "selectedItems 2",
+    "selectedItems 3"
+  ],
+  "selectionEvent": "SELECTION_CHANGE",
+  "showUpload": false,
+  "skeleton": "header",
+  "sortBy": "sortBy",
+  "sortDirection": "asc",
+  "srcField": "src",
+  "surface": "auto",
+  "tabIndex": -1,
+  "title": "title",
+  "totalCount": 1
+}
