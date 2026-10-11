@@ -1,6 +1,6 @@
 //! The ios renderer pack — generated renderer sources + pattern fixtures, read from
 //! the shipped `almadar-renderers-ios` beside the shell template, else this crate's
-//! `renderer-pack/` (`orbital_core::renderer_packs`).
+//! `renderers/swiftui/` (`orbital_core::renderer_packs`).
 
 use orbital_core::renderer_packs::{installed, RendererPack, RendererPackError};
 
@@ -13,7 +13,7 @@ pub fn require_renderer_pack() -> Result<&'static RendererPack, RendererPackErro
     installed(
         "ios",
         RENDERER_INTERFACE,
-        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("renderer-pack"),
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("renderers/swiftui"),
     )
 }
 

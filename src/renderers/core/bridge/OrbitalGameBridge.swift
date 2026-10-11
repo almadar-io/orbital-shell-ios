@@ -1,10 +1,10 @@
-// Swift↔Rust bridge for the orbital-game-renderer Metal surface.
+// Swift↔Rust bridge for the orbital-canvas Metal surface.
 //
 // @_silgen_name maps each symbol to the #[no_mangle] extern "C" fn exported by
-// orbital-game-renderer/src/c_api.rs.  The static lib is linked via
-// OrbitalGameRenderer.modulemap (project.yml adds it as a linked library).
+// orbital-canvas/src/c_api.rs.  The static lib is linked via
+// OrbitalCanvas.modulemap (project.yml adds it as a linked library).
 //
-// Usage: OrbitalGameRendererView owns one OpaquePointer (the *mut GameRenderer
+// Usage: OrbitalCanvasView owns one OpaquePointer (the *mut Canvas
 // from Rust) and drives init → set_scene → render → destroy through MTKViewDelegate.
 
 import CoreText
@@ -14,66 +14,66 @@ import SwiftUI
 
 // MARK: - Rust c_api bindings
 
-/// Opaque handle to a `GameRenderer` allocated on the Rust heap.
-typealias OrbitalGameRendererHandle = OpaquePointer
+/// Opaque handle to a `Canvas` allocated on the Rust heap.
+typealias OrbitalCanvasHandle = OpaquePointer
 
-@_silgen_name("orbital_game_renderer_init")
-func orbital_game_renderer_init(
+@_silgen_name("orbital_canvas_init")
+func orbital_canvas_init(
     _ rawSurface: UnsafeMutableRawPointer?,
     _ width: UInt32,
     _ height: UInt32,
     _ resourceBaseUrl: UnsafePointer<CChar>?
-) -> OrbitalGameRendererHandle?
+) -> OrbitalCanvasHandle?
 
-@_silgen_name("orbital_game_renderer_destroy")
-func orbital_game_renderer_destroy(_ renderer: OrbitalGameRendererHandle)
+@_silgen_name("orbital_canvas_destroy")
+func orbital_canvas_destroy(_ renderer: OrbitalCanvasHandle)
 
-@_silgen_name("orbital_game_renderer_submit")
-func orbital_game_renderer_submit(
-    _ renderer: OrbitalGameRendererHandle,
+@_silgen_name("orbital_canvas_submit")
+func orbital_canvas_submit(
+    _ renderer: OrbitalCanvasHandle,
     _ jsonPacket: UnsafePointer<CChar>
 )
 
-@_silgen_name("orbital_game_renderer_set_scene")
-func orbital_game_renderer_set_scene(
-    _ renderer: OrbitalGameRendererHandle,
+@_silgen_name("orbital_canvas_set_scene")
+func orbital_canvas_set_scene(
+    _ renderer: OrbitalCanvasHandle,
     _ sceneJson: UnsafePointer<CChar>
 ) -> Int32
 
-@_silgen_name("orbital_game_renderer_last_error")
-func orbital_game_renderer_last_error(_ renderer: OrbitalGameRendererHandle?) -> UnsafeMutablePointer<CChar>?
+@_silgen_name("orbital_canvas_last_error")
+func orbital_canvas_last_error(_ renderer: OrbitalCanvasHandle?) -> UnsafeMutablePointer<CChar>?
 
-@_silgen_name("orbital_game_renderer_render")
-func orbital_game_renderer_render(_ renderer: OrbitalGameRendererHandle)
+@_silgen_name("orbital_canvas_render")
+func orbital_canvas_render(_ renderer: OrbitalCanvasHandle)
 
-@_silgen_name("orbital_game_renderer_resize")
-func orbital_game_renderer_resize(
-    _ renderer: OrbitalGameRendererHandle,
+@_silgen_name("orbital_canvas_resize")
+func orbital_canvas_resize(
+    _ renderer: OrbitalCanvasHandle,
     _ width: UInt32,
     _ height: UInt32
 )
 
-@_silgen_name("orbital_game_renderer_set_scale")
-func orbital_game_renderer_set_scale(
-    _ renderer: OrbitalGameRendererHandle,
+@_silgen_name("orbital_canvas_set_scale")
+func orbital_canvas_set_scale(
+    _ renderer: OrbitalCanvasHandle,
     _ scale: Float
 ) -> Int32
 
 /// The host frame clock in milliseconds, handed over before each render; the first value is scene time zero.
-@_silgen_name("orbital_game_renderer_set_clock")
-func orbital_game_renderer_set_clock(_ renderer: OrbitalGameRendererHandle, _ ms: Double)
+@_silgen_name("orbital_canvas_set_clock")
+func orbital_canvas_set_clock(_ renderer: OrbitalCanvasHandle, _ ms: Double)
 
 /// Allow (1) or forbid (0) motion; forbidden, animated scenes draw their rest frame.
-@_silgen_name("orbital_game_renderer_set_motion")
-func orbital_game_renderer_set_motion(_ renderer: OrbitalGameRendererHandle, _ enabled: Int32)
+@_silgen_name("orbital_canvas_set_motion")
+func orbital_canvas_set_motion(_ renderer: OrbitalCanvasHandle, _ enabled: Int32)
 
 /// 1 while frames should keep coming (the scene animates, or its assets are arriving), else 0.
-@_silgen_name("orbital_game_renderer_wants_frames")
-func orbital_game_renderer_wants_frames(_ renderer: OrbitalGameRendererHandle) -> Int32
+@_silgen_name("orbital_canvas_wants_frames")
+func orbital_canvas_wants_frames(_ renderer: OrbitalCanvasHandle) -> Int32
 
-@_silgen_name("orbital_game_renderer_input")
-func orbital_game_renderer_input(
-    _ renderer: OrbitalGameRendererHandle,
+@_silgen_name("orbital_canvas_input")
+func orbital_canvas_input(
+    _ renderer: OrbitalCanvasHandle,
     _ eventType: UnsafePointer<CChar>,
     _ x: Float,
     _ y: Float,
@@ -82,21 +82,21 @@ func orbital_game_renderer_input(
 ) -> Int32
 
 /// Scene events that taps queued since the last call, as a JSON array of `{event, payload}`.
-/// Free the result with `orbital_game_renderer_free_string`.
-@_silgen_name("orbital_game_renderer_take_events")
-func orbital_game_renderer_take_events(_ renderer: OrbitalGameRendererHandle) -> UnsafeMutablePointer<CChar>?
+/// Free the result with `orbital_canvas_free_string`.
+@_silgen_name("orbital_canvas_take_events")
+func orbital_canvas_take_events(_ renderer: OrbitalCanvasHandle) -> UnsafeMutablePointer<CChar>?
 
 /// The scene's own size in logical units, so a host can size its view before a renderer exists.
-@_silgen_name("orbital_game_renderer_scene_size")
-func orbital_game_renderer_scene_size(
+@_silgen_name("orbital_canvas_scene_size")
+func orbital_canvas_scene_size(
     _ sceneJson: UnsafePointer<CChar>,
     _ outW: UnsafeMutablePointer<Float>,
     _ outH: UnsafeMutablePointer<Float>
 ) -> Int32
 
 /// One-shot headless render of a scene into RGBA bytes (physical pixels at density `scale`).
-@_silgen_name("orbital_game_renderer_render_scene_rgba")
-func orbital_game_renderer_render_scene_rgba(
+@_silgen_name("orbital_canvas_render_scene_rgba")
+func orbital_canvas_render_scene_rgba(
     _ sceneJson: UnsafePointer<CChar>,
     _ width: UInt32,
     _ height: UInt32,
@@ -105,30 +105,30 @@ func orbital_game_renderer_render_scene_rgba(
     _ outLen: UnsafeMutablePointer<Int>
 ) -> Int32
 
-@_silgen_name("orbital_game_renderer_render_to_rgba")
-func orbital_game_renderer_render_to_rgba(
-    _ renderer: OrbitalGameRendererHandle,
+@_silgen_name("orbital_canvas_render_to_rgba")
+func orbital_canvas_render_to_rgba(
+    _ renderer: OrbitalCanvasHandle,
     _ outPixels: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>,
     _ outLen: UnsafeMutablePointer<Int>
 ) -> Int32
 
-@_silgen_name("orbital_game_renderer_free_rgba")
-func orbital_game_renderer_free_rgba(_ pixels: UnsafeMutablePointer<UInt8>, _ len: Int)
+@_silgen_name("orbital_canvas_free_rgba")
+func orbital_canvas_free_rgba(_ pixels: UnsafeMutablePointer<UInt8>, _ len: Int)
 
-@_silgen_name("orbital_game_renderer_free_string")
-func orbital_game_renderer_free_string(_ s: UnsafeMutablePointer<CChar>)
+@_silgen_name("orbital_canvas_free_string")
+func orbital_canvas_free_string(_ s: UnsafeMutablePointer<CChar>)
 
 /// A pinch zooming a pannable scene (a graph) by `factor` about the focus, in points.
-@_silgen_name("orbital_game_renderer_zoom")
-func orbital_game_renderer_zoom(_ renderer: OrbitalGameRendererHandle, _ factor: Float, _ x: Float, _ y: Float)
+@_silgen_name("orbital_canvas_zoom")
+func orbital_canvas_zoom(_ renderer: OrbitalCanvasHandle, _ factor: Float, _ x: Float, _ y: Float)
 
 /// A view button on a pannable scene: `zoom-in`, `zoom-out` or `reset`; 1 when applied.
-@_silgen_name("orbital_game_renderer_view_command")
-func orbital_game_renderer_view_command(_ renderer: OrbitalGameRendererHandle, _ command: UnsafePointer<CChar>) -> Int32
+@_silgen_name("orbital_canvas_view_command")
+func orbital_canvas_view_command(_ renderer: OrbitalCanvasHandle, _ command: UnsafePointer<CChar>) -> Int32
 
 /// The asset cache counter: moves when a sprite sheet, atlas or image finishes loading.
-@_silgen_name("orbital_game_renderer_asset_generation")
-func orbital_game_renderer_asset_generation() -> UInt64
+@_silgen_name("orbital_canvas_asset_generation")
+func orbital_canvas_asset_generation() -> UInt64
 
 /// Published asset counter: canvas hosts that size from the scene re-measure when it moves (a
 /// sprite with no authored size takes its aspect from the loaded image).
@@ -138,19 +138,19 @@ final class AssetGeneration: ObservableObject {
 
     /// Publish the counter after a frame (main thread, the MTKView delegate).
     func poll() {
-        let now = orbital_game_renderer_asset_generation()
+        let now = orbital_canvas_asset_generation()
         if now != value { value = now }
     }
 }
 
 /// Scripts painted text needed and no face covers, each once: JSON `[{"script", "sample"}]`.
-/// Free the result with `orbital_game_renderer_free_string`.
-@_silgen_name("orbital_game_renderer_take_missing_scripts")
-func orbital_game_renderer_take_missing_scripts() -> UnsafeMutablePointer<CChar>?
+/// Free the result with `orbital_canvas_free_string`.
+@_silgen_name("orbital_canvas_take_missing_scripts")
+func orbital_canvas_take_missing_scripts() -> UnsafeMutablePointer<CChar>?
 
 /// Register face `index` of a font for `script` (ISO 15924); 1 when accepted, 0 when refused.
-@_silgen_name("orbital_game_renderer_add_font")
-func orbital_game_renderer_add_font(
+@_silgen_name("orbital_canvas_add_font")
+func orbital_canvas_add_font(
     _ script: UnsafePointer<CChar>,
     _ bytes: UnsafePointer<UInt8>,
     _ len: Int,
@@ -163,8 +163,8 @@ func orbital_game_renderer_add_font(
 enum SystemFontSource {
     /// True when a face was added, so the caller draws again.
     static func supplyMissing() -> Bool {
-        guard let raw = orbital_game_renderer_take_missing_scripts() else { return false }
-        defer { orbital_game_renderer_free_string(raw) }
+        guard let raw = orbital_canvas_take_missing_scripts() else { return false }
+        defer { orbital_canvas_free_string(raw) }
         guard let missing = try? JSONDecoder().decode([[String: String]].self, from: Data(String(cString: raw).utf8)) else {
             return false
         }
@@ -186,7 +186,7 @@ enum SystemFontSource {
         guard let data = sfnt(of: font), !data.isEmpty else { return false }
         let accepted = data.withUnsafeBytes { buffer -> Int32 in
             guard let bytes = buffer.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            return script.withCString { orbital_game_renderer_add_font($0, bytes, buffer.count, 0) }
+            return script.withCString { orbital_canvas_add_font($0, bytes, buffer.count, 0) }
         }
         return accepted == 1
     }
@@ -243,14 +243,14 @@ func orbitalSceneDrawable(_ pattern: String, _ props: AnyCodable) -> Bool {
           let json = String(data: data, encoding: .utf8) else { return false }
     var w: Float = 0
     var h: Float = 0
-    return json.withCString { orbital_game_renderer_scene_size($0, &w, &h) } == 1 && h > 0
+    return json.withCString { orbital_canvas_scene_size($0, &w, &h) } == 1 && h > 0
 }
 
 // MARK: - MTKView coordinator
 
 /// Drives the Rust renderer from an MTKView.  One instance per canvas widget.
 final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
-    private var handle: OrbitalGameRendererHandle?
+    private var handle: OrbitalCanvasHandle?
     private var pendingScene: String?
     private weak var view: MTKView?
     private var motionObserver: NSObjectProtocol?
@@ -263,7 +263,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
     /// its moves as they happen.
     func touch(_ type: String, at point: CGPoint) {
         guard let h = handle else { return }
-        _ = type.withCString { orbital_game_renderer_input(h, $0, Float(point.x), Float(point.y), 0, nil) }
+        _ = type.withCString { orbital_canvas_input(h, $0, Float(point.x), Float(point.y), 0, nil) }
         if type == "touch-up" || type == "touch-move" || type == "double-tap" { drainSceneEvents(h) }
         wake()
     }
@@ -295,7 +295,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
     @objc private func onPinch(_ gesture: UIPinchGestureRecognizer) {
         guard let h = handle, let view = gesture.view, gesture.state == .changed else { return }
         let focus = gesture.location(in: view)
-        orbital_game_renderer_zoom(h, Float(gesture.scale), Float(focus.x), Float(focus.y))
+        orbital_canvas_zoom(h, Float(gesture.scale), Float(focus.x), Float(focus.y))
         gesture.scale = 1
         wake()
     }
@@ -305,9 +305,9 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
         touch("double-tap", at: gesture.location(in: view))
     }
 
-    private func drainSceneEvents(_ h: OrbitalGameRendererHandle) {
-        guard let raw = orbital_game_renderer_take_events(h) else { return }
-        defer { orbital_game_renderer_free_string(raw) }
+    private func drainSceneEvents(_ h: OrbitalCanvasHandle) {
+        guard let raw = orbital_canvas_take_events(h) else { return }
+        defer { orbital_canvas_free_string(raw) }
         guard let events = try? JSONDecoder().decode([AnyCodable].self, from: Data(String(cString: raw).utf8)) else { return }
         for event in events {
             guard let name = event["event"]?.stringValue else { continue }
@@ -320,7 +320,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
         guard handle == nil else { return }
         let layer = view.layer  // CAMetalLayer* is the backing layer for MTKView
         let rawLayer = Unmanaged.passUnretained(layer).toOpaque()
-        handle = orbital_game_renderer_init(rawLayer, width, height, nil)
+        handle = orbital_canvas_init(rawLayer, width, height, nil)
         self.view = view
         installGestures(on: view)
         if let h = handle {
@@ -339,15 +339,15 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
 
     /// drawableSize is physical pixels; the renderer lays the scene out in points
     /// (physical / scale) so a board is the same logical size as on the web.
-    private func applyScale(_ h: OrbitalGameRendererHandle, _ view: MTKView) {
-        if orbital_game_renderer_set_scale(h, Float(view.contentScaleFactor)) == 0 {
+    private func applyScale(_ h: OrbitalCanvasHandle, _ view: MTKView) {
+        if orbital_canvas_set_scale(h, Float(view.contentScaleFactor)) == 0 {
             NSLog("[OrbitalGame] set_scale refused: %@", lastRendererError())
         }
     }
 
     /// The OS reduced-motion setting: forbidden, animated scenes draw their rest frame.
-    private func applyMotion(_ h: OrbitalGameRendererHandle) {
-        orbital_game_renderer_set_motion(h, UIAccessibility.isReduceMotionEnabled ? 0 : 1)
+    private func applyMotion(_ h: OrbitalCanvasHandle) {
+        orbital_canvas_set_motion(h, UIAccessibility.isReduceMotionEnabled ? 0 : 1)
     }
 
     /// Start the display link again. `draw` stops it once the scene is static and its assets have
@@ -368,7 +368,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
             motionObserver = nil
         }
         if let h = handle {
-            orbital_game_renderer_destroy(h)
+            orbital_canvas_destroy(h)
             handle = nil
         }
     }
@@ -384,8 +384,8 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
     private var lastScene: String?
 
     private func lastRendererError() -> String {
-        guard let raw = orbital_game_renderer_last_error(handle) else { return "" }
-        defer { orbital_game_renderer_free_string(raw) }
+        guard let raw = orbital_canvas_last_error(handle) else { return "" }
+        defer { orbital_canvas_free_string(raw) }
         return String(cString: raw)
     }
 
@@ -394,7 +394,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         guard let h = handle else { return }
         applyScale(h, view)
-        orbital_game_renderer_resize(h, UInt32(size.width), UInt32(size.height))
+        orbital_canvas_resize(h, UInt32(size.width), UInt32(size.height))
         wake()
     }
 
@@ -402,7 +402,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
         guard let h = handle else { return }
         if let scene = pendingScene {
             let accepted = scene.withCString { ptr in
-                orbital_game_renderer_set_scene(h, ptr)
+                orbital_canvas_set_scene(h, ptr)
             }
             if accepted == 0 {
                 NSLog("[OrbitalGame] set_scene refused: %@", lastRendererError())
@@ -410,11 +410,11 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
             lastScene = scene
             pendingScene = nil
         }
-        orbital_game_renderer_set_clock(h, CACurrentMediaTime() * 1000)
-        orbital_game_renderer_render(h)
-        if SystemFontSource.supplyMissing() { orbital_game_renderer_render(h) }
+        orbital_canvas_set_clock(h, CACurrentMediaTime() * 1000)
+        orbital_canvas_render(h)
+        if SystemFontSource.supplyMissing() { orbital_canvas_render(h) }
         AssetGeneration.shared.poll()
-        if orbital_game_renderer_wants_frames(h) == 0 { idle(view) }
+        if orbital_canvas_wants_frames(h) == 0 { idle(view) }
     }
 }
 
@@ -492,9 +492,9 @@ private struct OrbitalGameMTKHostView: UIViewRepresentable {
 
 /// Registered in `CorePatternRegistry` for `canvas` / `game-canvas` / `canvas-2d` /
 /// `game-canvas-2d`. Hands the node's props (JSON) to the Rust renderer through
-/// `orbital_game_renderer_set_scene`: the renderer owns the children→drawables
+/// `orbital_canvas_set_scene`: the renderer owns the children→drawables
 /// routing, camera vocabulary and the drawable walk
-/// (`orbital-game-renderer::mappers::game_canvas_2d::from_canvas_node`), shared with
+/// (`orbital-canvas::mappers::game_canvas_2d::from_canvas_node`), shared with
 /// the desktop shells. The draw-* children are never rendered as SwiftUI views.
 func GameCanvas2dRenderer(
     props: AnyCodable,
@@ -599,12 +599,12 @@ private struct OrbitalGameRasterView: View {
         guard width > 0, height > 0 else { return nil }
         var pixels: UnsafeMutablePointer<UInt8>?
         var length = 0
-        let ok = scene.withCString { orbital_game_renderer_render_scene_rgba($0, UInt32(width), UInt32(height), Float(scale), &pixels, &length) }
+        let ok = scene.withCString { orbital_canvas_render_scene_rgba($0, UInt32(width), UInt32(height), Float(scale), &pixels, &length) }
         guard ok == 1, let raw = pixels else {
             NSLog("[OrbitalGame] raster render refused (no GPU adapter or a scene the native painter refuses)")
             return nil
         }
-        defer { orbital_game_renderer_free_rgba(raw, length) }
+        defer { orbital_canvas_free_rgba(raw, length) }
         let data = Data(bytes: raw, count: length)
         guard let provider = CGDataProvider(data: data as CFData),
               let cg = CGImage(
@@ -642,7 +642,7 @@ private struct LearningCanvasHostView: View {
     private func sceneSize(of scene: String) -> (width: CGFloat, height: CGFloat)? {
         var w: Float = 0
         var h: Float = 0
-        let ok = scene.withCString { orbital_game_renderer_scene_size($0, &w, &h) }
+        let ok = scene.withCString { orbital_canvas_scene_size($0, &w, &h) }
         guard ok == 1, h > 0 else { return nil }
         return (CGFloat(w), CGFloat(h))
     }

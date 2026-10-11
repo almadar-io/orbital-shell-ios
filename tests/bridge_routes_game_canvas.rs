@@ -3,10 +3,10 @@
 //! is absent in CI, so we inspect the generated Swift sources that the backend
 //! emits into the Xcode project.
 //!
-//! Also exercises the headless RGBA path from orbital-game-renderer via the Rust
+//! Also exercises the headless RGBA path from orbital-canvas via the Rust
 //! c_api (no device/Metal needed on Linux CI — graceful skip when no adapter).
 
-use orbital_game_renderer::{GameRenderer, packet::{DrawCommand, GameRenderPacket, Rect}};
+use orbital_canvas::{Canvas, packet::{DrawCommand, GameRenderPacket, Rect}};
 use orbital_shell_ios::IosBackend;
 use orbital_core::generate::Backend;
 use orbital_core::ir::OirModule;
@@ -80,14 +80,14 @@ fn bridge_swift_declares_silgen_name_symbols() {
     let bridge_src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
 
     let required_symbols = [
-        "orbital_game_renderer_init",
-        "orbital_game_renderer_destroy",
-        "orbital_game_renderer_submit",
-        "orbital_game_renderer_set_scene",
-        "orbital_game_renderer_last_error",
-        "orbital_game_renderer_render",
-        "orbital_game_renderer_resize",
-        "orbital_game_renderer_render_to_rgba",
+        "orbital_canvas_init",
+        "orbital_canvas_destroy",
+        "orbital_canvas_submit",
+        "orbital_canvas_set_scene",
+        "orbital_canvas_last_error",
+        "orbital_canvas_render",
+        "orbital_canvas_resize",
+        "orbital_canvas_render_to_rgba",
     ];
 
     for sym in &required_symbols {
@@ -121,12 +121,12 @@ fn backend_emits_bridge_files() {
         paths
     );
     assert!(
-        paths.contains(&"Bridge/OrbitalGameRenderer.modulemap"),
-        "backend does not emit OrbitalGameRenderer.modulemap"
+        paths.contains(&"Bridge/OrbitalCanvas.modulemap"),
+        "backend does not emit OrbitalCanvas.modulemap"
     );
     assert!(
-        paths.contains(&"Bridge/orbital_game_renderer.h"),
-        "backend does not emit orbital_game_renderer.h"
+        paths.contains(&"Bridge/orbital_canvas.h"),
+        "backend does not emit orbital_canvas.h"
     );
 }
 
@@ -136,7 +136,7 @@ fn backend_emits_bridge_files() {
 
 #[test]
 fn headless_rgba_non_blank_or_no_adapter() {
-    let mut renderer = match GameRenderer::new_headless() {
+    let mut renderer = match Canvas::new_headless() {
         Ok(r) => r,
         Err(_) => return,  // no adapter on this CI host — skip
     };
@@ -175,17 +175,17 @@ fn headless_rgba_non_blank_or_no_adapter() {
 fn canvas_host_sends_scene_not_raw_props_as_packet() {
     let bridge_src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
     assert!(
-        bridge_src.contains("orbital_game_renderer_set_scene(h, ptr)"),
+        bridge_src.contains("orbital_canvas_set_scene(h, ptr)"),
         "coordinator must forward the canvas node through set_scene"
     );
     assert!(
-        !bridge_src.contains("orbital_game_renderer_submit(h,"),
+        !bridge_src.contains("orbital_canvas_submit(h,"),
         "coordinator must not call packet-only submit with raw canvas props"
     );
-    let header = include_str!("../src/renderers/core/bridge/orbital_game_renderer.h");
+    let header = include_str!("../src/renderers/core/bridge/orbital_canvas.h");
     assert!(
-        header.contains("orbital_game_renderer_set_scene"),
-        "C header must declare orbital_game_renderer_set_scene"
+        header.contains("orbital_canvas_set_scene"),
+        "C header must declare orbital_canvas_set_scene"
     );
 }
 
@@ -198,9 +198,9 @@ fn the_canvas_display_link_stops_for_a_static_scene_and_reads_the_host_clock() {
     let src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
     let draw = src.split("func draw(in view: MTKView)").nth(1).expect("draw(in:)");
     let draw = draw.split("\n    }\n").next().unwrap();
-    let clock = draw.find("orbital_game_renderer_set_clock(h, CACurrentMediaTime()").expect("clock before render");
-    let render = draw.find("orbital_game_renderer_render(h)").expect("render");
-    let ask = draw.find("orbital_game_renderer_wants_frames(h) == 0").expect("frame request check");
+    let clock = draw.find("orbital_canvas_set_clock(h, CACurrentMediaTime()").expect("clock before render");
+    let render = draw.find("orbital_canvas_render(h)").expect("render");
+    let ask = draw.find("orbital_canvas_wants_frames(h) == 0").expect("frame request check");
     assert!(clock < render && render < ask, "clock, then render, then the wants-frames check");
     assert!(draw.contains("idle(view)"), "a static scene pauses the MTKView");
     assert!(src.contains("view?.isPaused = false"), "a new scene, touch or resize wakes it");

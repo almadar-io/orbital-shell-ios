@@ -1783,7 +1783,7 @@ func FallbackRendererView(
 
 /// The MTKView/Metal GPU bridge files (hand-authored static sources under
 /// `renderers/core/bridge/`) emitted into the Xcode project so the `game-canvas-2d`
-/// renderer can reach the orbital-game-renderer c_api. Mirrors the android shell.
+/// renderer can reach the orbital-canvas c_api. Mirrors the android shell.
 fn generate_game_bridge_files() -> Vec<GeneratedFile> {
     const BRIDGE_DIR: &str = "Bridge";
     vec![
@@ -1792,13 +1792,13 @@ fn generate_game_bridge_files() -> Vec<GeneratedFile> {
             content: include_str!("renderers/core/bridge/OrbitalGameBridge.swift").to_string(),
         },
         GeneratedFile {
-            path: format!("{BRIDGE_DIR}/OrbitalGameRenderer.modulemap"),
-            content: include_str!("renderers/core/bridge/OrbitalGameRenderer.modulemap")
+            path: format!("{BRIDGE_DIR}/OrbitalCanvas.modulemap"),
+            content: include_str!("renderers/core/bridge/OrbitalCanvas.modulemap")
                 .to_string(),
         },
         GeneratedFile {
-            path: format!("{BRIDGE_DIR}/orbital_game_renderer.h"),
-            content: include_str!("renderers/core/bridge/orbital_game_renderer.h").to_string(),
+            path: format!("{BRIDGE_DIR}/orbital_canvas.h"),
+            content: include_str!("renderers/core/bridge/orbital_canvas.h").to_string(),
         },
         // B5 (ledger §159): the in-app kernel bridge, same BRIDGE_DIR/library as the
         // renderer bridge above (`orbital-ffi` carries both C ABIs in one staticlib).
@@ -2316,7 +2316,7 @@ struct GeneratedPage: View {{
 /// `Sources/OrbitalAppTests/Resources/pattern-fixtures/*.json` into the
 /// test target.
 fn generate_resolved_schema_file(schema: &OrbitalSchema) -> GeneratedFile {
-    let content = serde_json::to_string_pretty(schema)
+    let content = orbital_core::util::canonical_json::to_canonical_string_pretty(schema)
         .unwrap_or_else(|e| format!("{{\"error\": \"failed to serialize resolved schema: {e}\"}}"));
     GeneratedFile {
         path: "Sources/OrbitalApp/Resources/resolved_schema.json".to_string(),
@@ -3998,7 +3998,7 @@ mod tests {
                     entity: "Task".to_string(),
                 },
             );
-            let mut obj = std::collections::HashMap::new();
+            let mut obj = orbital_core::ir::OirObject::new();
             obj.insert("id".to_string(), OirValue::String("x".to_string()));
             f.default = Some(OirValue::Object(obj));
             f

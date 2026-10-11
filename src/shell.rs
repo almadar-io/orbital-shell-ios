@@ -19,9 +19,7 @@ impl IosShell {
     /// Find the `ios-shell` template directory at runtime.
     fn find_template_path() -> PathBuf {
         // The one template lookup (`ORBITAL_SHELLS_DIR` → beside the binary → the checkout).
-        orbital_core::renderer_packs::find_template_dir("ios-shell").unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("template")
-        })
+        orbital_core::renderer_packs::shell_template("ios-shell", std::path::Path::new(env!("CARGO_MANIFEST_DIR")))
     }
 
     /// Create with an explicit template path.
@@ -478,7 +476,7 @@ mod tests {
 
     fn template_file(rel: &str) -> String {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("template")
+            .join("templates/ios-shell")
             .join(rel);
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
     }
@@ -490,7 +488,7 @@ mod tests {
         assert!(project.contains("Sources/OrbitalAppVerifyDriver"));
         assert!(!project.contains("UITests"));
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("template/Sources");
+            .join("templates/ios-shell/Sources");
         assert!(!root.join("OrbitalAppUITests").exists());
         assert!(root
             .join("OrbitalAppVerifyDriver/VerifyDriver.swift")

@@ -23,7 +23,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.93.0
 
       - name: Check the renderer pack
-        run: node renderer-pack/scripts/check-pack.mjs
+        run: node renderers/swiftui/scripts/check-pack.mjs
         working-directory: .
       - name: Test
         run: cargo test

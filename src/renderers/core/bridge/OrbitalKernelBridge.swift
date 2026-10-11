@@ -2,7 +2,7 @@
 // (B5/B7, ledger §159). @_silgen_name maps each symbol to the
 // #[no_mangle] extern "C" fn exported by orbital-ffi/src/kernel_c_api.rs —
 // the same static lib the game renderer bridge (OrbitalGameBridge.swift)
-// links, via OrbitalGameRenderer.modulemap.
+// links, via OrbitalCanvas.modulemap.
 //
 // These Codable models mirror orbital-core's canonical wire types
 // (EventResponse/EventRequest/TraitSnapshot/DispatchMode — see
