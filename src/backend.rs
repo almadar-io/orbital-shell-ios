@@ -654,6 +654,7 @@ class EffectHandlers {
             viewModel?.alertMessage = title.isEmpty ? message : "\(title): \(message)"
         case "emit":
             guard let event = arr[safe: 1]?.stringValue else { return }
+            AlmadarBus.shared.post(event, arr[safe: 2])
             viewModel?.sendEvent(trait: requestTrait, event: event, payload: arr[safe: 2])
         default:
             break
@@ -3620,6 +3621,16 @@ mod tests {
         assert!(content.contains(
             r#"viewModel?.sendEvent(trait: requestTrait, event: event, payload: arr[safe: 2])"#
         ));
+    }
+
+    /// Every `emit` is posted to the renderer kit's `AlmadarBus` before it re-dispatches, so a
+    /// renderer with an event-listen prop (code-block `onSetMode`) hears it — CodeBlock.tsx's bus listen.
+    #[test]
+    fn effect_handlers_post_every_emit_to_the_renderer_bus() {
+        let content = generate_effect_handlers_file().content;
+        let post = content.find("AlmadarBus.shared.post(event, arr[safe: 2])").expect("emit posts to the bus");
+        let redispatch = content.find("viewModel?.sendEvent(trait: requestTrait, event: event, payload: arr[safe: 2])").unwrap();
+        assert!(post < redispatch);
     }
 
     /// The splice function exists with the `@trait.` token contract:

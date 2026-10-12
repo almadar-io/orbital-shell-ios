@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 
@@ -2741,5 +2742,62 @@ extension EnvironmentValues {
     var almadarFieldFocusToken: String? {
         get { self[AlmadarFieldFocusTokenKey.self] }
         set { self[AlmadarFieldFocusTokenKey.self] = newValue }
+    }
+}
+
+/// Events the app emits, for a renderer that LISTENS to one (an event-listen prop, e.g. code-block `onSetMode`).
+/// The app's effect handler posts every `emit`; a renderer subscribes by the event name its prop names.
+final class AlmadarBus {
+    static let shared = AlmadarBus()
+    let events = PassthroughSubject<AlmadarBusEvent, Never>()
+    func post(_ event: String, _ payload: AnyCodable?) { events.send(AlmadarBusEvent(event: event, payload: payload)) }
+}
+
+struct AlmadarBusEvent {
+    let event: String
+    let payload: AnyCodable?
+}
+
+extension AtomKit {
+    /// The DOM `KeyboardEvent.key` chord: modifiers in the fixed Control, Alt, Shift, Meta order, then the key.
+    static func keyChord(_ key: String, ctrl: Bool, alt: Bool, shift: Bool, meta: Bool) -> String {
+        var parts: [String] = []
+        if ctrl { parts.append("Control") }
+        if alt { parts.append("Alt") }
+        if shift { parts.append("Shift") }
+        if meta { parts.append("Meta") }
+        parts.append(key)
+        return parts.joined(separator: "+")
+    }
+
+    /// A key press as DOM `KeyboardEvent.key`.
+    @available(iOS 17.0, *)
+    static func domKey(_ press: KeyPress) -> String {
+        switch press.key {
+        case .escape: return "Escape"
+        case .return: return "Enter"
+        case .delete: return "Backspace"
+        case .deleteForward: return "Delete"
+        case .tab: return "Tab"
+        case .space: return " "
+        case .upArrow: return "ArrowUp"
+        case .downArrow: return "ArrowDown"
+        case .leftArrow: return "ArrowLeft"
+        case .rightArrow: return "ArrowRight"
+        case .home: return "Home"
+        case .end: return "End"
+        case .pageUp: return "PageUp"
+        case .pageDown: return "PageDown"
+        default: return press.characters
+        }
+    }
+
+    /// DOM `KeyboardEvent.code` for a `domKey`: letters are `KeyX`, digits `DigitN`, the space bar `Space`; named keys keep their name.
+    static func domCode(_ key: String) -> String {
+        if key == " " { return "Space" }
+        guard key.count == 1, let ch = key.first else { return key }
+        if ch.isLetter { return "Key" + key.uppercased() }
+        if ch.isNumber { return "Digit" + key }
+        return key
     }
 }

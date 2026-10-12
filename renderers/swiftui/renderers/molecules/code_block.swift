@@ -3,6 +3,31 @@ import SwiftUI
 
 // tier: molecules — a grouped container styled by tokens only
 
+/// A captured key (or chord) is kept out of the text and emitted as UI:{onKey} — CodeBlock.tsx `handleEditableKeyDown`.
+struct CodeBlockKeyCapture: ViewModifier {
+    let props: AnyCodable
+    let capturedKeys: Set<String>
+    let onEvent: (String, AnyCodable?) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.onKeyPress(phases: [.down, .repeat]) { press in
+                let keyEvent = props.string("onKey")
+                let editorId = props.string("editorId")
+                guard !keyEvent.isEmpty, !editorId.isEmpty else { return .ignored }
+                let key = AtomKit.domKey(press)
+                let ctrl = press.modifiers.contains(.control), alt = press.modifiers.contains(.option)
+                let shift = press.modifiers.contains(.shift), meta = press.modifiers.contains(.command)
+                guard capturedKeys.contains(key) || capturedKeys.contains(AtomKit.keyChord(key, ctrl: ctrl, alt: alt, shift: shift, meta: meta)) else { return .ignored }
+                onEvent(keyEvent, eventEnvelope(props, payload: ["editorId": .string(editorId), "key": .string(key), "code": .string(AtomKit.domCode(key)), "ctrl": .bool(ctrl), "alt": .bool(alt), "shift": .bool(shift), "meta": .bool(meta), "repeat": .bool(press.phase == .repeat)]))
+                return .handled
+            }
+        } else {
+            content
+        }
+    }
+}
+
 struct CodeBlockMoleculeView: View {
     let props: AnyCodable
     let onEvent: (String, AnyCodable?) -> Void
@@ -13,6 +38,7 @@ struct CodeBlockMoleculeView: View {
     @State private var copied = false
     @State private var active = 0
     @FocusState private var focused: Bool
+    @State private var capturedKeys: Set<String> = []
     private let shared: Binding<String>?
 
     init(props: AnyCodable, onEvent: @escaping (String, AnyCodable?) -> Void, text: Binding<String>? = nil) {
@@ -134,6 +160,12 @@ struct CodeBlockMoleculeView: View {
                     let event = props.string(isFocused ? "onEditorFocus" : "onEditorBlur", default: isFocused ? "EDITOR_FOCUS" : "EDITOR_BLUR")
                     if !event.isEmpty { onEvent(event, eventEnvelope(props, payload: ["editorId": .string(props.string("editorId"))])) }
                 }
+                .onReceive(AlmadarBus.shared.events) { bus in
+                    // CodeBlock.tsx useEditorCapabilities: the latest SET_MODE for this editor names the keys it captures.
+                    guard bus.event == props.string("onSetMode", default: "SET_MODE"), bus.payload?.string("editorId") == props.string("editorId") else { return }
+                    capturedKeys = Set((bus.payload?.dictValue?["keys"]?.arrayValue ?? []).compactMap { $0.stringValue })
+                }
+                .modifier(CodeBlockKeyCapture(props: props, capturedKeys: capturedKeys, onEvent: onEvent))
         } else if code.isEmpty && diffLines == nil {
             AtomKit.typo("Nothing to show", "small", color: "muted", align: "center", onEvent: onEvent)
                 .padding(theme.density.spacing.space4)
