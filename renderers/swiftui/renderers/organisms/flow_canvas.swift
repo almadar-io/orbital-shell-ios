@@ -11,6 +11,7 @@ func FlowCanvasRenderer(
 ) -> AnyView {
     let orbitals = props.dictValue?["schema"]?.dictValue?["orbitals"]?.arrayValue ?? []
     let openEvent = props.string("openBehaviorEvent")
+    let traitsEvent = props.string("openTraitsEvent")
     AnyView(VStack(alignment: .leading, spacing: 8) {
         if orbitals.isEmpty { AtomKit.typo("No program", "caption", color: "muted", onEvent: onEvent) }
         ForEach(orbitals.indices, id: \.self) { index in
@@ -21,6 +22,7 @@ func FlowCanvasRenderer(
                 else { ButtonRenderer(props: AtomKit.child(props, ["label": .string(name), "variant": "ghost", "action": .string(openEvent), "actionPayload": .dict(["name": .string(name)])]), modifier: nil, onEvent: onEvent) }
                 AtomKit.typo(orbital.dictValue?["entity"]?.string("name") ?? "", "caption", color: "muted", onEvent: onEvent)
                 AtomKit.badge("\((orbital.dictValue?["traits"]?.arrayValue ?? []).count) traits · \((orbital.dictValue?["pages"]?.arrayValue ?? []).count) pages", "default", onEvent: onEvent)
+                if !traitsEvent.isEmpty { ButtonRenderer(props: AtomKit.child(props, ["label": "Open traits", "variant": "ghost", "size": "sm", "action": .string(traitsEvent), "actionPayload": .dict(["orbital": .string(name)])]), modifier: nil, onEvent: onEvent) }
             }
         }
     })

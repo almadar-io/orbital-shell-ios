@@ -6,12 +6,13 @@
   "orbRenderer": {
     "target": "ios",
     "rendererInterface": 2,
-    "patternsRegistry": "10.125.0",
+    "patternsRegistry": "10.126.0",
     "coverage": [
       "accordion",
       "action-palette",
       "action-tile",
       "activation-block",
+      "activity-rail",
       "agent-activity-feed",
       "agent-activity-row",
       "agent-chat-feed",
@@ -28,6 +29,7 @@
       "avatar",
       "avl-glyph",
       "avl-state-machine",
+      "avl-transition-detail",
       "avl-transition-explainer",
       "badge",
       "behavior-view",

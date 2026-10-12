@@ -53,6 +53,12 @@ struct SwitchAtomView: View {
                 if !changeEvent.isEmpty {
                     onEvent(changeEvent, eventEnvelope(props, payload: ["checked": .bool(newValue)]))
                 }
+                let action = props.string("action")
+                if !action.isEmpty {
+                    var merged = props.dictValue?["actionPayload"]?.dictValue ?? [:]
+                    merged["checked"] = .bool(newValue)
+                    onEvent(action, eventEnvelope(props.merging(["actionPayload": .dict(merged)])))
+                }
             }
         )
         Toggle(isOn: binding) {
