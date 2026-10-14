@@ -6,7 +6,7 @@
   "orbRenderer": {
     "target": "ios",
     "rendererInterface": 2,
-    "patternsRegistry": "10.127.0",
+    "patternsRegistry": "10.128.0",
     "coverage": [
       "accordion",
       "action-palette",
