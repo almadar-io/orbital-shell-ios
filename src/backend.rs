@@ -2379,18 +2379,6 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
     fn json(&self) -> String {
         "AnyCodable".to_string()
     }
-    fn scalar(&self) -> String {
-        // The closed union as a named hoisted Codable enum (Swift 5.5+
-        // synthesizes Codable for associated-value enums), following the
-        // Phase-2 union hoisting pattern: the field references `{Name}Scalar`
-        // by bare name, the declaration hoists before the entity struct.
-        let name = format!("{}Scalar", self.context_name);
-        self.hoisted.borrow_mut().push(format!(
-            "enum {}: Codable {{\n    case string(String)\n    case number(Double)\n    case bool(Bool)\n    case null\n}}",
-            name
-        ));
-        name
-    }
     fn enum_ty(&self, name: &str, _enum_values: Option<&[String]>) -> String {
         split_to_pascal_case(name)
     }
@@ -2545,12 +2533,6 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
     }
     fn classify_json(&self) -> TypeMappingClass {
         TypeMappingClass::Lossy
-    }
-    fn classify_scalar(&self) -> TypeMappingClass {
-        // Pair decision with `scalar`: the hoisted 4-case Codable enum spells
-        // the closed `string | number | boolean | null` union — Faithful
-        // (Phase 3).
-        TypeMappingClass::Faithful
     }
     fn classify_node(&self) -> TypeMappingClass {
         // The json carrier keeps the pattern tree's STRUCTURE and erases
@@ -3740,14 +3722,6 @@ mod tests {
         assert_eq!(oir_type_to_swift(&OirType::Date, "Ctx"), "String");
         assert_eq!(oir_type_to_swift(&OirType::DateTime, "Ctx"), "String");
         assert_eq!(oir_type_to_swift(&OirType::Json, "Ctx"), "AnyCodable");
-        // Scalar: the closed union as a named hoisted 4-case Codable enum
-        // (Phase 3) — bare name at the field position, declaration hoisted.
-        let (ty, hoisted) = oir_type_to_swift_hoisted(&OirType::Scalar, "Ctx");
-        assert_eq!(ty, "CtxScalar");
-        assert_eq!(
-            hoisted,
-            vec!["enum CtxScalar: Codable {\n    case string(String)\n    case number(Double)\n    case bool(Bool)\n    case null\n}"]
-        );
         assert_eq!(oir_type_to_swift(&OirType::Trait, "Ctx"), "String");
         assert_eq!(oir_type_to_swift(&OirType::SExpr, "Ctx"), "AnyCodable");
         // Reference: the `orbital_core` default (`render.rs` C1) — a relation
