@@ -103,12 +103,12 @@ impl Backend for IosBackend {
             crate::pack::pack()
                 .sources
                 .iter()
+                .filter(|(rel, _)| !rel.starts_with(PACK_TESTS_PREFIX))
                 .map(|(rel, content)| GeneratedFile {
                     path: format!("Views/core/{rel}"),
                     content: content.clone(),
                 }),
         );
-        files.extend(generate_game_bridge_files());
         files.extend(generate_pattern_snapshot_test_files(module));
         files.push(generate_app_file(module));
         if let Some(schema) = &self.resolved_schema {
@@ -910,15 +910,20 @@ class OrbitalViewModel: ObservableObject {
     private var awaitingRaised: [UUID: [AwaitRender]] = [:]
     /// `traitContent`, with a `skeleton` node for an awaiting trait that has not rendered yet.
     var contentWithAwaiting: [String: AnyCodable] {
-        var content = traitContent
+        var content = traitContent.mapValues(paintedRowSets)
         for (name, render) in awaitingMain where content[name] == nil {
             content[name] = .dict(["type": .string("skeleton"), "spec": render.skeleton])
         }
         return content
     }
+    /// `value` with every row-set marker replaced by the rows the kernel's one resolver answers now, re-checked
+    /// for the signed-in viewer (EXEC-RENDER-3). A rows-changed repaint re-applies the render and lands here again.
+    private func paintedRowSets(_ value: AnyCodable) -> AnyCodable {
+        kernel?.resolvingRowSets(value) ?? value
+    }
     /// `uiSlots`, with a `skeleton` node in an awaiting slot that is still empty.
     var slotsWithAwaiting: [String: AnyCodable] {
-        var slots = uiSlots
+        var slots = uiSlots.mapValues(paintedRowSets)
         for (slot, render) in awaitingSlots where slots[slot] == nil {
             slots[slot] = .dict(["type": .string("skeleton"), "spec": render.skeleton])
         }
@@ -1782,42 +1787,8 @@ func FallbackRendererView(
     }
 }
 
-/// The MTKView/Metal GPU bridge files (hand-authored static sources under
-/// `renderers/core/bridge/`) emitted into the Xcode project so the `game-canvas-2d`
-/// renderer can reach the orbital-canvas c_api. Mirrors the android shell.
-fn generate_game_bridge_files() -> Vec<GeneratedFile> {
-    const BRIDGE_DIR: &str = "Bridge";
-    vec![
-        GeneratedFile {
-            path: format!("{BRIDGE_DIR}/OrbitalGameBridge.swift"),
-            content: include_str!("renderers/core/bridge/OrbitalGameBridge.swift").to_string(),
-        },
-        GeneratedFile {
-            path: format!("{BRIDGE_DIR}/OrbitalCanvas.modulemap"),
-            content: include_str!("renderers/core/bridge/OrbitalCanvas.modulemap")
-                .to_string(),
-        },
-        GeneratedFile {
-            path: format!("{BRIDGE_DIR}/orbital_canvas.h"),
-            content: include_str!("renderers/core/bridge/orbital_canvas.h").to_string(),
-        },
-        // B5 (ledger §159): the in-app kernel bridge, same BRIDGE_DIR/library as the
-        // renderer bridge above (`orbital-ffi` carries both C ABIs in one staticlib).
-        GeneratedFile {
-            path: format!("{BRIDGE_DIR}/OrbitalKernelBridge.swift"),
-            content: include_str!("renderers/core/bridge/OrbitalKernelBridge.swift").to_string(),
-        },
-        // Native sign-in: the host `/login` route's provider client, session binding and view.
-        GeneratedFile {
-            path: format!("{BRIDGE_DIR}/OrbitalAuth.swift"),
-            content: include_str!("renderers/core/bridge/OrbitalAuth.swift").to_string(),
-        },
-        GeneratedFile {
-            path: format!("{BRIDGE_DIR}/OrbitalSignInView.swift"),
-            content: include_str!("renderers/core/bridge/OrbitalSignInView.swift").to_string(),
-        },
-    ]
-}
+/// Pack sources under this prefix are the app's unit-test sources, not app sources.
+const PACK_TESTS_PREFIX: &str = "bridge/tests/";
 
 /// Width in points of the one phone content column every pattern snapshot is
 /// laid out in: a 390pt device minus 16pt horizontal padding per side.
@@ -1969,7 +1940,9 @@ final class PatternSnapshotTests: XCTestCase {{
 
     files.push(GeneratedFile {
         path: "Sources/OrbitalAppTests/OrbitalAuthTests.swift".to_string(),
-        content: include_str!("renderers/core/bridge/tests/OrbitalAuthTests.swift")
+        content: crate::pack::pack()
+            .source(&format!("{PACK_TESTS_PREFIX}OrbitalAuthTests.swift"))
+            .expect("the pack ships bridge/tests/OrbitalAuthTests.swift")
             .replace("__APP_MODULE__", &app_module_name),
     });
 
@@ -2807,6 +2780,25 @@ mod tests {
     }
 
     #[test]
+    fn the_view_model_paints_row_set_markers_through_the_kernel_resolver() {
+        let vm = generate_view_model_file(&awaiting_module()).content;
+        assert!(
+            vm.contains("var content = traitContent.mapValues(paintedRowSets)"),
+            "the main slot paints resolved rows"
+        );
+        assert!(
+            vm.contains("var slots = uiSlots.mapValues(paintedRowSets)"),
+            "so does every overlay slot"
+        );
+        assert!(vm.contains("kernel?.resolvingRowSets(value) ?? value"));
+        assert_eq!(
+            vm.matches("paintedRowSets(").count(),
+            1,
+            "control: one resolver call site, the stored content is never rewritten"
+        );
+    }
+
+    #[test]
     fn the_view_model_shows_a_predicted_skeleton_only_after_the_busy_delay_and_clears_it_with_the_leg(
     ) {
         let vm = generate_view_model_file(&awaiting_module()).content;
@@ -3065,7 +3057,7 @@ mod tests {
             "the local-seed, optimistic and persisted legs all post to the wire orbital"
         );
         assert!(vm.contains("api.postServerLeg(leg, orbital: orbital, requestTrait: requestTrait)"));
-        let bridge = include_str!("renderers/core/bridge/OrbitalKernelBridge.swift");
+        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
         assert!(bridge.contains("orbital: wire.orbital,"));
         assert!(bridge.contains("let orbital: String"));
         // Control: a different module name changes nothing about the URL source.
@@ -4148,7 +4140,7 @@ mod tests {
 
     #[test]
     fn kernel_bridge_declares_the_verify_bridge_symbols_and_wraps_them_in_debug() {
-        let bridge = include_str!("renderers/core/bridge/OrbitalKernelBridge.swift");
+        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
         for symbol in orbital_ffi::kernel_c_api::VERIFY_BRIDGE_C_SYMBOLS {
             assert!(
                 bridge.contains(&format!("@_silgen_name(\"{symbol}\")")),
@@ -4460,8 +4452,8 @@ mod tests {
                 .find(|f| f.path == path)
                 .unwrap_or_else(|| panic!("{path} not emitted"))
         };
-        let auth = &find("Bridge/OrbitalAuth.swift").content;
-        let view = &find("Bridge/OrbitalSignInView.swift").content;
+        let auth = &find("Views/core/bridge/OrbitalAuth.swift").content;
+        let view = &find("Views/core/bridge/OrbitalSignInView.swift").content;
         assert!(
             auth.contains("accounts:signInWithPassword")
                 && auth.contains("accounts:signInWithCustomToken")
@@ -4766,7 +4758,7 @@ mod tests {
 
     #[test]
     fn kernel_bridge_wraps_abandon_and_set_route() {
-        let bridge = include_str!("renderers/core/bridge/OrbitalKernelBridge.swift");
+        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
         assert!(bridge.contains("@_silgen_name(\"orbital_kernel_abandon_server_leg\")"));
         let at = bridge
             .find("orbital_verify_bridge_set_route(handle, $0)")
@@ -4930,7 +4922,7 @@ mod tests {
 
     #[test]
     fn kernel_bridge_wraps_the_frame_api_and_the_frame_loop_is_a_display_link() {
-        let bridge = include_str!("renderers/core/bridge/OrbitalKernelBridge.swift");
+        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
         for sym in [
             "orbital_kernel_frame",
             "orbital_kernel_frame_pause",

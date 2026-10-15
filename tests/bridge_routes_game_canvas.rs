@@ -63,7 +63,7 @@ fn registry_routes_canvas_to_gpu_renderer() {
     // The registry only proves the symbol is REFERENCED — the bridge source must also
     // DEFINE it, or the reference is dead and swiftc fails with "cannot find in scope"
     // (verified 2026-09-18: this gate was green while GameCanvas2dRenderer did not exist).
-    let bridge_src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
+    let bridge_src = include_str!("../renderers/swiftui/renderers/bridge/OrbitalGameBridge.swift");
     assert!(
         bridge_src.contains("func GameCanvas2dRenderer("),
         "OrbitalGameBridge.swift does not define GameCanvas2dRenderer — the registry \
@@ -77,7 +77,7 @@ fn registry_routes_canvas_to_gpu_renderer() {
 
 #[test]
 fn bridge_swift_declares_silgen_name_symbols() {
-    let bridge_src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
+    let bridge_src = include_str!("../renderers/swiftui/renderers/bridge/OrbitalGameBridge.swift");
 
     let required_symbols = [
         "orbital_canvas_init",
@@ -116,16 +116,16 @@ fn backend_emits_bridge_files() {
     let paths: Vec<&str> = output.files.iter().map(|f| f.path.as_str()).collect();
 
     assert!(
-        paths.contains(&"Bridge/OrbitalGameBridge.swift"),
+        paths.contains(&"Views/core/bridge/OrbitalGameBridge.swift"),
         "backend does not emit OrbitalGameBridge.swift; got: {:?}",
         paths
     );
     assert!(
-        paths.contains(&"Bridge/OrbitalCanvas.modulemap"),
+        paths.contains(&"Views/core/bridge/OrbitalCanvas.modulemap"),
         "backend does not emit OrbitalCanvas.modulemap"
     );
     assert!(
-        paths.contains(&"Bridge/orbital_canvas.h"),
+        paths.contains(&"Views/core/bridge/orbital_canvas.h"),
         "backend does not emit orbital_canvas.h"
     );
 }
@@ -173,7 +173,7 @@ fn headless_rgba_non_blank_or_no_adapter() {
 
 #[test]
 fn canvas_host_sends_scene_not_raw_props_as_packet() {
-    let bridge_src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
+    let bridge_src = include_str!("../renderers/swiftui/renderers/bridge/OrbitalGameBridge.swift");
     assert!(
         bridge_src.contains("orbital_canvas_set_scene(h, ptr)"),
         "coordinator must forward the canvas node through set_scene"
@@ -182,7 +182,7 @@ fn canvas_host_sends_scene_not_raw_props_as_packet() {
         !bridge_src.contains("orbital_canvas_submit(h,"),
         "coordinator must not call packet-only submit with raw canvas props"
     );
-    let header = include_str!("../src/renderers/core/bridge/orbital_canvas.h");
+    let header = include_str!("../renderers/swiftui/renderers/bridge/orbital_canvas.h");
     assert!(
         header.contains("orbital_canvas_set_scene"),
         "C header must declare orbital_canvas_set_scene"
@@ -195,7 +195,7 @@ fn canvas_host_sends_scene_not_raw_props_as_packet() {
 
 #[test]
 fn the_canvas_display_link_stops_for_a_static_scene_and_reads_the_host_clock() {
-    let src = include_str!("../src/renderers/core/bridge/OrbitalGameBridge.swift");
+    let src = include_str!("../renderers/swiftui/renderers/bridge/OrbitalGameBridge.swift");
     let draw = src.split("func draw(in view: MTKView)").nth(1).expect("draw(in:)");
     let draw = draw.split("\n    }\n").next().unwrap();
     let clock = draw.find("orbital_canvas_set_clock(h, CACurrentMediaTime()").expect("clock before render");

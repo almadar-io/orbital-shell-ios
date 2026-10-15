@@ -8,7 +8,7 @@ use orbital_core::generate::Backend;
 use orbital_core::ir::OirModule;
 use orbital_shell_ios::IosBackend;
 
-const KERNEL_BRIDGE_SWIFT: &str = include_str!("../src/renderers/core/bridge/OrbitalKernelBridge.swift");
+const KERNEL_BRIDGE_SWIFT: &str = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
 
 #[test]
 fn kernel_bridge_declares_every_c_abi_symbol() {
@@ -29,7 +29,7 @@ fn backend_emits_kernel_bridge_file() {
 
     let paths: Vec<&str> = output.files.iter().map(|f| f.path.as_str()).collect();
     assert!(
-        paths.contains(&"Bridge/OrbitalKernelBridge.swift"),
+        paths.contains(&"Views/core/bridge/OrbitalKernelBridge.swift"),
         "backend does not emit OrbitalKernelBridge.swift; got: {:?}",
         paths
     );
@@ -37,7 +37,7 @@ fn backend_emits_kernel_bridge_file() {
     let bridge = output
         .files
         .iter()
-        .find(|f| f.path == "Bridge/OrbitalKernelBridge.swift")
+        .find(|f| f.path == "Views/core/bridge/OrbitalKernelBridge.swift")
         .unwrap();
     assert!(bridge.content.contains("orbital_kernel_init"));
     assert!(bridge.content.contains("final class OrbitalKernel"));

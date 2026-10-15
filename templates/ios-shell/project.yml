@@ -17,7 +17,7 @@ targets:
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         # Swift↔Rust bridge: add the generated Bridge dir so the module map is found.
-        SWIFT_INCLUDE_PATHS: $(SRCROOT)/Sources/OrbitalApp/Generated/Bridge
+        SWIFT_INCLUDE_PATHS: $(SRCROOT)/Sources/OrbitalApp/Generated/Views/core/bridge
         # Link the Rust static lib built by `cargo build --target aarch64-apple-ios`.
         # Set CARGO_BUILD_DIR to the Cargo target directory before running xcodegen.
         OTHER_LDFLAGS: -lorbital_ffi

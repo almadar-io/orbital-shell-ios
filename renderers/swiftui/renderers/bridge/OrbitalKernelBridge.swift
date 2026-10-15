@@ -94,6 +94,12 @@ func orbital_kernel_get_state(
 @_silgen_name("orbital_kernel_snapshot")
 func orbital_kernel_snapshot(_ handle: OrbitalKernelHandleRef?) -> UnsafeMutablePointer<CChar>?
 
+@_silgen_name("orbital_kernel_resolve_rows")
+func orbital_kernel_resolve_rows(
+    _ handle: OrbitalKernelHandleRef?,
+    _ refJson: UnsafePointer<CChar>?
+) -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("orbital_kernel_set_theme_mode")
 func orbital_kernel_set_theme_mode(
     _ handle: OrbitalKernelHandleRef?,
@@ -354,6 +360,13 @@ enum KernelFrameOutcome {
     case failed(String)
 }
 
+/// `orbital_kernel_resolve_rows`'s answer: the rows a row-set reference resolves to now, in its order. An
+/// `{"error": ...}` answer has no `rows` and fails this decode.
+struct KernelRowPage: Decodable {
+    let rows: [AnyCodable]
+    let total: Int
+}
+
 /// `orbital_kernel_apply_server_response`'s decoded envelope. A `{"error":
 /// ...}` response (no `applied` key) fails this decode — `applyServerResponse`
 /// returns `nil` and the caller reads `lastError`, same contract as `dispatch`.
@@ -547,6 +560,33 @@ final class OrbitalKernel {
         struct Wire: Decodable { let states: [String: String]; let theme: KernelResolvedTheme?; let canvasTheme: AnyCodable?; let motion: AnyCodable? }
         guard let wire = try? JSONDecoder().decode(Wire.self, from: data) else { return ([:], nil, nil, nil) }
         return (wire.states, wire.theme, wire.canvasTheme, wire.motion)
+    }
+
+    /// The rows a row-set reference (the `ref` of a `$rowSet` marker) resolves to now for the current viewer, in the
+    /// reference's order (`orbital_kernel_resolve_rows`); `nil` when the kernel cannot resolve it (read `lastError`).
+    func resolveRows(reference: AnyCodable) -> [AnyCodable]? {
+        guard let data = try? JSONEncoder().encode(reference),
+              let referenceJSON = String(data: data, encoding: .utf8)
+        else { return nil }
+        let raw: UnsafeMutablePointer<CChar>? = referenceJSON.withCString { orbital_kernel_resolve_rows(handle, $0) }
+        guard let answer = consume(raw), let page = try? JSONDecoder().decode(KernelRowPage.self, from: answer) else { return nil }
+        return page.rows
+    }
+
+    /// `value` with every row-set marker replaced by the rows [resolveRows] answers; a reference that cannot be
+    /// resolved becomes an empty list, never a stale copy.
+    func resolvingRowSets(_ value: AnyCodable) -> AnyCodable {
+        switch value {
+        case .dict(let fields):
+            if fields["$rowSet"]?.boolValue == true, let reference = fields["ref"] {
+                return .array(resolveRows(reference: reference) ?? [])
+            }
+            return .dict(fields.mapValues { resolvingRowSets($0) })
+        case .array(let items):
+            return .array(items.map { resolvingRowSets($0) })
+        default:
+            return value
+        }
     }
 
     /// Overrides the kernel's tracked light/dark toggle for every subsequent
