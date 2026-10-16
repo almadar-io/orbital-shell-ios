@@ -8,8 +8,8 @@
 
 use orbital_canvas::{Canvas, packet::{DrawCommand, GameRenderPacket, Rect}};
 use orbital_shell_ios::IosBackend;
-use orbital_core::generate::Backend;
-use orbital_core::ir::OirModule;
+use orbital_core_base::generate::Backend;
+use orbital_core_base::ir::OirModule;
 
 /// All canvas-family pattern names that must be routed to the GPU renderer.
 const CANVAS_PATTERNS: &[&str] = &["canvas", "game-canvas", "game-canvas-2d"];

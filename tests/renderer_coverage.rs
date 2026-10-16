@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-use orbital_core::renderer_packs::RendererPack;
+use orbital_core_base::renderer_packs::RendererPack;
 use orbital_shell_ios::{require_renderer_pack, RENDERER_INTERFACE};
 
 fn pack() -> &'static RendererPack {

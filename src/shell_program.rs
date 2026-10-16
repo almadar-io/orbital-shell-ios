@@ -1,7 +1,7 @@
 //! `orb-shell-ios`: the iOS shell as a program (`orbital_core::shell_protocol`).
 
-use orbital_core::project::write_project;
-use orbital_core::shell_protocol::{
+use orbital_core_base::project::write_project;
+use orbital_core_base::shell_protocol::{
     description, written_files, GenerateRequest, GenerateResponse, ShellDescription, ShellFailure, ShellProgram,
     CODE_BAD_REQUEST, CODE_GENERATE_FAILED,
 };
@@ -9,7 +9,7 @@ use std::path::Path;
 
 pub struct IosProgram;
 
-fn resolved(request: &GenerateRequest) -> Result<orbital_core::OrbitalSchema, ShellFailure> {
+fn resolved(request: &GenerateRequest) -> Result<orbital_core_base::schema::types::OrbitalSchema, ShellFailure> {
     request
         .resolved
         .clone()
@@ -28,8 +28,8 @@ impl ShellProgram for IosProgram {
         let generated = write_project(&request.module, output, &shell, &backend, &request.write)?;
         let files = written_files(&generated);
         if request.write.copy_template {
-            use orbital_core::shell::Shell as _;
-            let failed = |e: orbital_core::shell::ShellError| ShellFailure::new(CODE_GENERATE_FAILED, e.to_string());
+            use orbital_core_base::shell::Shell as _;
+            let failed = |e: orbital_core_base::shell::ShellError| ShellFailure::new(CODE_GENERATE_FAILED, e.to_string());
             shell.validate_structure(output).map_err(failed)?;
             shell.validate_generated_layout(output, &files).map_err(failed)?;
         }

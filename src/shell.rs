@@ -1,7 +1,7 @@
 //! iOS Shell implementation.
 
-use orbital_core::shell::{Shell, ShellError};
-use orbital_core::str_utils::{split_to_pascal_case, to_title_case};
+use orbital_core_base::shell::{Shell, ShellError};
+use orbital_core_base::str_utils::{split_to_pascal_case, to_title_case};
 use std::path::{Path, PathBuf};
 
 /// iOS shell for native SwiftUI projects.
@@ -19,7 +19,7 @@ impl IosShell {
     /// Find the `ios-shell` template directory at runtime.
     fn find_template_path() -> PathBuf {
         // The one template lookup (`ORBITAL_SHELLS_DIR` → beside the binary → the checkout).
-        orbital_core::renderer_packs::shell_template("ios-shell", std::path::Path::new(env!("CARGO_MANIFEST_DIR")))
+        orbital_core_base::renderer_packs::shell_template("ios-shell", std::path::Path::new(env!("CARGO_MANIFEST_DIR")))
     }
 
     /// Create with an explicit template path.

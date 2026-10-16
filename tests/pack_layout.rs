@@ -3,8 +3,8 @@
 
 use std::path::{Path, PathBuf};
 
-use orbital_core::generate::Backend;
-use orbital_core::ir::OirModule;
+use orbital_core_base::generate::Backend;
+use orbital_core_base::ir::OirModule;
 use orbital_shell_ios::IosBackend;
 
 const PLATFORM_EXTENSIONS: [&str; 4] = ["swift", "kt", "h", "modulemap"];

@@ -4,8 +4,8 @@
 //! as `orbital-shell-android`'s `bridge_routes_game_canvas.rs`), and the
 //! backend actually emits the file into the generated Xcode project.
 
-use orbital_core::generate::Backend;
-use orbital_core::ir::OirModule;
+use orbital_core_base::generate::Backend;
+use orbital_core_base::ir::OirModule;
 use orbital_shell_ios::IosBackend;
 
 const KERNEL_BRIDGE_SWIFT: &str = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");

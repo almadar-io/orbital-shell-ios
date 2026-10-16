@@ -2,7 +2,7 @@
 //! the shipped `almadar-renderers-ios` beside the shell template, else this crate's
 //! `renderers/swiftui/` (`orbital_core::renderer_packs`).
 
-use orbital_core::renderer_packs::{installed, RendererPack, RendererPackError};
+use orbital_core_base::renderer_packs::{installed, RendererPack, RendererPackError};
 
 /// The renderer interface this shell emits against; a pack generated for another
 /// is refused. Bumped with pattern-sync's `RENDERER_INTERFACE`.

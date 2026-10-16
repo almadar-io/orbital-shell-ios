@@ -6,9 +6,9 @@
 //! for each canonical slot, and that `GeneratedApp.swift` dispatches overlays via
 //! `slotRole()` rather than hardcoded key lookups.
 
-use orbital_core::generate::Backend;
-use orbital_core::ir::OirModule;
-use orbital_core::slots::{slot_role, SlotRole};
+use orbital_core_base::generate::Backend;
+use orbital_core_base::ir::OirModule;
+use orbital_core_base::slots::{slot_role, SlotRole};
 use orbital_shell_ios::IosBackend;
 
 /// Canonical names from `orbital_core::slots` and their expected roles.
