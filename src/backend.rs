@@ -2880,6 +2880,43 @@ mod tests {
         assert!(app.contains("@trait."));
     }
 
+    /// Kernel-mode shell: `os/` effects are never compiled into the generated client. They are
+    /// unsupported here by design, and must stay out of the client-effect set the handlers cover.
+    #[test]
+    fn os_effects_are_not_silently_dropped_by_the_ios_shell() {
+        use orbital_core_base::ir::{OirEffect, OirExpr, OirTransition};
+        let effect = OirEffect::os(
+            orbital_core_base::os::OsOp::ReadFile,
+            vec![OirExpr::string("/data/secret.txt")],
+            None,
+            None,
+        );
+        assert!(
+            !orbital_core_base::effect_types::CLIENT_EFFECT_KINDS.contains(&effect.kind()),
+            "os/ effects are server-side; the client handlers must not claim them"
+        );
+        let mut module = OirModule::new("OsApp", "1.0.0");
+        let mut t = OirTrait::new("Files");
+        t.states.push(OirState::initial("idle"));
+        let mut tr = OirTransition::new("idle", "idle", "READ");
+        tr.effects.push(OirExpr::effect(effect));
+        t.transitions.push(tr);
+        module.traits.push(t);
+        let output = IosBackend::new().generate(&module);
+        let all: String = output.files.iter().map(|f| f.content.as_str()).collect();
+        assert!(
+            !all.contains("secret.txt") && !all.contains("os/read-file"),
+            "the shell runs kernel mode only: os/ is unsupported in generated code, never half-emitted"
+        );
+        let handlers = output
+            .files
+            .iter()
+            .find(|f| f.path.starts_with("EffectHandlers."))
+            .map(|f| f.content.as_str())
+            .unwrap_or_default();
+        assert!(!handlers.contains("os/"), "{handlers}");
+    }
+
     #[test]
     fn test_backend_name() {
         let backend = IosBackend::new();
