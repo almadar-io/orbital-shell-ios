@@ -1,5 +1,5 @@
 // R1-device-ios host: loads liborbital_ffi through the kernel C ABI and times the parity workloads
-// (`@almadar-io/parity gen-device-workloads` writes them). Prints one JSON line.
+// (`@almadar-io/kernel-bench-tool gen-device-workloads` writes them). Prints one JSON line.
 // Usage: bench <workload-dir> [--sustained]
 import Foundation
 
