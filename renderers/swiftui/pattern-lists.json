@@ -1,0 +1,369 @@
+{
+ "deferred": [
+  "canvas",
+  "canvas-2d",
+  "draw-shape",
+  "draw-sprite",
+  "draw-text",
+  "draw-group",
+  "draw-mesh",
+  "draw-skinned-mesh",
+  "draw-shape-layer",
+  "draw-sprite-layer",
+  "draw-text-layer",
+  "draw-fx-layer",
+  "game-audio-toggle",
+  "game-icon",
+  "video-embed"
+ ],
+ "canvas": [
+  "algo-graph-canvas",
+  "algorithm-canvas",
+  "biology-canvas",
+  "chemistry-canvas",
+  "graph-canvas",
+  "learning-canvas",
+  "math-canvas",
+  "physics-canvas",
+  "atlas-image",
+  "graph-view",
+  "jazari-state-machine",
+  "orbital-visualization",
+  "positioned-canvas",
+  "state-graph",
+  "state-machine-view",
+  "svg-branch",
+  "svg-connection",
+  "svg-flow",
+  "svg-grid",
+  "svg-lobe",
+  "svg-mesh",
+  "svg-morph",
+  "svg-node",
+  "svg-pulse",
+  "svg-ring",
+  "svg-shield",
+  "svg-stack"
+ ],
+ "fixedSize": [
+  "atlas-image",
+  "orbital-visualization",
+  "positioned-canvas",
+  "state-graph",
+  "svg-branch",
+  "svg-connection",
+  "svg-flow",
+  "svg-grid",
+  "svg-lobe",
+  "svg-mesh",
+  "svg-morph",
+  "svg-node",
+  "svg-pulse",
+  "svg-ring",
+  "svg-shield",
+  "svg-stack"
+ ],
+ "families": {
+  "ios/atoms": "// tier: atoms — a single SwiftUI control",
+  "android/atoms": "// tier: atoms — a single Material 3 control",
+  "ios/molecules": "// tier: molecules — a grouped container styled by tokens only",
+  "android/molecules": "// tier: molecules — a grouped container styled by tokens only",
+  "ios/organisms": "// tier: organisms — a List/Form/ScrollView fragment",
+  "android/organisms": "// tier: organisms — a LazyColumn/LazyVerticalGrid fragment",
+  "ios/templates": "// tier: templates — CONTENT ONLY",
+  "android/templates": "// tier: templates — CONTENT ONLY"
+ },
+ "chrome": {
+  "ios": [
+   "NavigationStack",
+   "NavigationView",
+   ".sheet(",
+   ".fullScreenCover(",
+   ".alert(",
+   ".confirmationDialog("
+  ],
+  "android": [
+   "Scaffold(",
+   "TopAppBar(",
+   "NavigationBar(",
+   "ModalBottomSheet(",
+   "ModalNavigationDrawer(",
+   "Dialog(",
+   "AlertDialog(",
+   "Snackbar("
+  ]
+ },
+ "accessor": "\\b(AlmadarTheme|almadarTheme|MaterialTheme\\.|LocalAlmadar\\w*)\\b",
+ "tokenRules": {
+  "ios": [
+   {
+    "re": "\\bColor\\(",
+    "rule": "raw Color(...) construction"
+   },
+   {
+    "re": "\\.systemGray\\w*",
+    "rule": "system gray literal"
+   },
+   {
+    "re": "\\bColor\\.(gray|blue|red|green|yellow|orange|purple|pink|black|white|clear|primary|secondary|accentColor)\\b",
+    "rule": "system Color.* literal"
+   },
+   {
+    "re": "\\.padding\\(\\s*(\\.\\w+\\s*,\\s*)?\\d",
+    "rule": "bare numeric .padding(<number>) literal"
+   },
+   {
+    "re": "\\bCGFloat\\(\\s*-?(?:0*[1-9]\\d*(?:\\.\\d+)?|0*\\.\\d*[1-9]\\d*)\\s*\\)",
+    "rule": "bare numeric CGFloat(<number>) layout literal"
+   },
+   {
+    "re": "\\b(?:(?:min|max|ideal)(?:Width|Height)|width|height)\\s*:\\s*-?(?:0*[1-9]\\d*(?:\\.\\d+)?|0*\\.\\d*[1-9]\\d*)(?:[^\\w.]|$)",
+    "rule": "bare numeric frame/width/height dimension literal"
+   }
+  ],
+  "android": [
+   {
+    "re": "\\b[Cc][Oo][Ll][Oo][Rr]\\(0[xX]",
+    "rule": "raw Color(0x...) hex construction"
+   },
+   {
+    "re": "\\bColor\\(",
+    "rule": "raw Color(...) construction"
+   },
+   {
+    "re": "\\bColor\\.(Gray|LightGray|DarkGray|Blue|Red|Green|Yellow|Magenta|Cyan|Black|White)\\b",
+    "rule": "system Color.* literal"
+   },
+   {
+    "re": "\\b\\d+(\\.\\d+)?\\.(dp|sp)\\b",
+    "rule": "bare numeric .dp/.sp literal"
+   },
+   {
+    "re": "\\.padding\\(\\s*\\d",
+    "rule": "bare numeric .padding(<number>) literal"
+   },
+   {
+    "re": "\\bDp\\(\\s*-?(?:0*[1-9]\\d*(?:\\.\\d+)?|0*\\.\\d*[1-9]\\d*)f?\\s*\\)",
+    "rule": "bare numeric Dp(<number>) layout literal"
+   }
+  ]
+ },
+ "atomOwned": {
+  "ios": [
+   {
+    "label": "Button(",
+    "re": "(?:^|[^A-Za-z0-9_])Button\\("
+   },
+   {
+    "label": "Toggle(",
+    "re": "(?:^|[^A-Za-z0-9_])Toggle\\("
+   },
+   {
+    "label": "TextField(",
+    "re": "(?:^|[^A-Za-z0-9_])TextField\\("
+   },
+   {
+    "label": "SecureField(",
+    "re": "(?:^|[^A-Za-z0-9_])SecureField\\("
+   },
+   {
+    "label": "Image(systemName:",
+    "re": "(?:^|[^A-Za-z0-9_])Image\\(systemName:"
+   },
+   {
+    "label": "ProgressView(",
+    "re": "(?:^|[^A-Za-z0-9_])ProgressView\\("
+   },
+   {
+    "label": "Divider(",
+    "re": "(?:^|[^A-Za-z0-9_])Divider\\("
+   },
+   {
+    "label": "Text(",
+    "re": "(?:^|[^A-Za-z0-9_])Text\\("
+   }
+  ],
+  "android": [
+   {
+    "label": "Button(",
+    "re": "(?:^|[^A-Za-z0-9_])Button\\("
+   },
+   {
+    "label": "TextButton(",
+    "re": "(?:^|[^A-Za-z0-9_])TextButton\\("
+   },
+   {
+    "label": "OutlinedButton(",
+    "re": "(?:^|[^A-Za-z0-9_])OutlinedButton\\("
+   },
+   {
+    "label": "FilledTonalButton(",
+    "re": "(?:^|[^A-Za-z0-9_])FilledTonalButton\\("
+   },
+   {
+    "label": "IconButton(",
+    "re": "(?:^|[^A-Za-z0-9_])IconButton\\("
+   },
+   {
+    "label": "Text(",
+    "re": "(?:^|[^A-Za-z0-9_])Text\\("
+   },
+   {
+    "label": "Icon(",
+    "re": "(?:^|[^A-Za-z0-9_])Icon\\("
+   },
+   {
+    "label": "TextField(",
+    "re": "(?:^|[^A-Za-z0-9_])TextField\\("
+   },
+   {
+    "label": "OutlinedTextField(",
+    "re": "(?:^|[^A-Za-z0-9_])OutlinedTextField\\("
+   },
+   {
+    "label": "Checkbox(",
+    "re": "(?:^|[^A-Za-z0-9_])Checkbox\\("
+   },
+   {
+    "label": "Switch(",
+    "re": "(?:^|[^A-Za-z0-9_])Switch\\("
+   },
+   {
+    "label": "CircularProgressIndicator(",
+    "re": "(?:^|[^A-Za-z0-9_])CircularProgressIndicator\\("
+   },
+   {
+    "label": "LinearProgressIndicator(",
+    "re": "(?:^|[^A-Za-z0-9_])LinearProgressIndicator\\("
+   },
+   {
+    "label": "HorizontalDivider(",
+    "re": "(?:^|[^A-Za-z0-9_])HorizontalDivider\\("
+   },
+   {
+    "label": "Divider(",
+    "re": "(?:^|[^A-Za-z0-9_])Divider\\("
+   }
+  ]
+ },
+ "subcomposeRoots": "(^|[^A-Za-z])(LazyColumn|LazyRow|LazyVerticalGrid|LazyHorizontalGrid|LazyVerticalStaggeredGrid|LazyHorizontalStaggeredGrid|HorizontalPager|VerticalPager|SubcomposeLayout|BoxWithConstraints)\\(",
+ "localDecl": "^\\s*(?:(?:private|fileprivate)\\s+)?(?:func|struct|class|enum|actor|protocol)\\s+\\w",
+ "actionCalls": [
+  {
+   "name": "VerificationIds.action",
+   "opener": "VerificationIds.action(",
+   "boundary": false,
+   "mode": "first",
+   "platform": "any"
+  },
+  {
+   "name": "atomAction",
+   "opener": "atomAction(",
+   "boundary": true,
+   "mode": "first",
+   "platform": "any"
+  },
+  {
+   "name": "almadarActionId",
+   "opener": "almadarActionId(",
+   "boundary": true,
+   "mode": "first",
+   "platform": "any"
+  },
+  {
+   "name": "almadarActionTag",
+   "opener": "almadarActionTag(",
+   "boundary": true,
+   "mode": "first",
+   "platform": "any"
+  },
+  {
+   "name": "busId",
+   "opener": "busId(",
+   "boundary": true,
+   "mode": "first",
+   "platform": "any"
+  },
+  {
+   "name": "controlId",
+   "opener": "controlId(",
+   "boundary": true,
+   "mode": "event",
+   "platform": "any"
+  },
+  {
+   "name": "AlmadarButton",
+   "opener": "AlmadarButton(",
+   "boundary": true,
+   "mode": "third",
+   "platform": "any"
+  },
+  {
+   "name": "ButtonRenderer",
+   "opener": "ButtonRenderer(",
+   "boundary": true,
+   "mode": "owner",
+   "platform": "ios"
+  },
+  {
+   "name": "BadgeRenderer",
+   "opener": "BadgeRenderer(",
+   "boundary": true,
+   "mode": "owner",
+   "platform": "ios"
+  }
+ ],
+ "rustKeywords": [
+  "as",
+  "async",
+  "await",
+  "break",
+  "const",
+  "continue",
+  "crate",
+  "dyn",
+  "else",
+  "enum",
+  "extern",
+  "false",
+  "fn",
+  "for",
+  "if",
+  "impl",
+  "in",
+  "let",
+  "loop",
+  "match",
+  "mod",
+  "move",
+  "mut",
+  "pub",
+  "ref",
+  "return",
+  "self",
+  "Self",
+  "static",
+  "struct",
+  "super",
+  "trait",
+  "true",
+  "type",
+  "unsafe",
+  "use",
+  "where",
+  "while",
+  "abstract",
+  "become",
+  "box",
+  "do",
+  "final",
+  "macro",
+  "override",
+  "priv",
+  "typeof",
+  "unsized",
+  "yield",
+  "virtual",
+  "union"
+ ]
+}
