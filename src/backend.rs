@@ -1398,7 +1398,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
     fn optional(&self, _inner_ty: &OirType, inner: String) -> String {
         format!("{}?", inner)
     }
-    fn struct_ty(&self, fields: &[OirField]) -> String {
+    fn struct_ty(&self, fields: &[OirField], _additional: Option<&OirType>) -> String {
         let name = self.context_name.clone();
         let parts: Vec<String> = fields
             .iter()
@@ -1444,7 +1444,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
                     hoisted: self.hoisted,
                 };
                 match &v.field_type {
-                    OirType::Struct { fields } => {
+                    OirType::Struct { fields, additional: _additional } => {
                         let parts: Vec<String> = fields
                             .iter()
                             .map(|f| {
@@ -1567,8 +1567,8 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
     fn classify_optional(&self, _inner_ty: &OirType, inner: TypeMappingClass) -> TypeMappingClass {
         inner
     }
-    fn classify_struct_ty(&self, _fields: &[OirField]) -> TypeMappingClass {
-        TypeMappingClass::Faithful
+    fn classify_struct_ty(&self, _fields: &[OirField], additional: Option<&OirType>) -> TypeMappingClass {
+        if additional.is_some() { TypeMappingClass::Lossy } else { TypeMappingClass::Faithful }
     }
     fn classify_union_ty(&self, variants: &[OirField]) -> TypeMappingClass {
         // A named enum with associated values carries every variant's
@@ -2838,6 +2838,7 @@ mod tests {
         // this mapper — so the `?` comes solely from the `required` flag, not
         // from an `OirType::Optional` wrapper (that would double it to `??`).
         let struct_ty = OirType::Struct {
+            additional: None,
             fields: vec![OirField::new("userId", OirType::String), {
                 let mut f = OirField::new("nickName", OirType::String);
                 f.required = false;
@@ -2858,12 +2859,14 @@ mod tests {
                 OirField::new(
                     "book",
                     OirType::Struct {
+                        additional: None,
                         fields: vec![OirField::new("kind", OirType::String)],
                     },
                 ),
                 OirField::new(
                     "movie",
                     OirType::Struct {
+                        additional: None,
                         fields: vec![OirField::new("kind", OirType::String)],
                     },
                 ),
@@ -2948,6 +2951,7 @@ mod tests {
         // `effective_type()` unwraps the wrapper before `struct_ty` appends
         // its own — the two optionality spellings can never compound to `??`.
         let struct_ty = OirType::Struct {
+            additional: None,
             fields: vec![{
                 let mut f = OirField::new("nickName", OirType::optional(OirType::String));
                 // The wrapper is authoritative regardless of `required`.
