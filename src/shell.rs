@@ -4,6 +4,11 @@ use orbital_core_base::shell::{Shell, ShellError};
 use orbital_core_base::str_utils::{split_to_pascal_case, to_title_case};
 use std::path::{Path, PathBuf};
 
+const CORE_SOURCES: &[(&str, &str)] = &[(
+    "Sources/OrbitalApp/AnyCodable.swift",
+    include_str!("../core/AnyCodable.swift"),
+)];
+
 /// iOS shell for native SwiftUI projects.
 pub struct IosShell {
     template_path: PathBuf,
@@ -95,6 +100,13 @@ impl Shell for IosShell {
             ));
         }
         copy_dir_recursive(&self.template_path, output_dir)?;
+        for (relative, content) in CORE_SOURCES {
+            let target = output_dir.join(relative);
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(target, content)?;
+        }
 
         #[cfg(unix)]
         {
@@ -190,7 +202,11 @@ impl IosShell {
     /// `copy_dir_recursive` skips) — read from disk at check time so a
     /// template edit is picked up without touching this check.
     fn template_swift_basenames(&self) -> Result<std::collections::HashSet<String>, ShellError> {
-        let mut basenames = std::collections::HashSet::new();
+        let mut basenames: std::collections::HashSet<String> = CORE_SOURCES
+            .iter()
+            .filter_map(|(relative, _)| Path::new(relative).file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .collect();
         let root = self.template_path.join("Sources/OrbitalApp");
         if root.exists() {
             collect_swift_basenames(&root, &mut basenames)?;
@@ -438,6 +454,21 @@ mod tests {
             .expect_err("App.swift must collide with the template-owned App.swift");
         assert!(matches!(err, ShellError::InvalidStructure { .. }));
         let _ = std::fs::remove_dir_all(output_dir.parent().unwrap());
+    }
+
+    #[test]
+    fn copied_core_types_remain_protected_from_generated_collisions() {
+        let (shell, output_dir) = layout_test_fixture("core_collision");
+        shell.copy_template(&output_dir).unwrap();
+        let core = std::fs::read_to_string(
+            output_dir.join("Sources/OrbitalApp/AnyCodable.swift"),
+        )
+        .unwrap();
+        assert!(core.contains("enum AnyCodable: Codable, Equatable"));
+        let error = shell
+            .validate_generated_layout(&output_dir, &["AnyCodable.swift".to_string()])
+            .unwrap_err();
+        assert!(error.to_string().contains("collides"));
     }
 
     #[test]
