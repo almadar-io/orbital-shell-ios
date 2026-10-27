@@ -121,7 +121,7 @@ class OrbitalViewModel: ObservableObject {
     private var routeStack: [String] = []
     private static let eventLog = Logger(subsystem: "com.orbital", category: "dispatch")
 
-    /// One owner for every `clientEffects` entry — render-ui indexing/slot
+    /// One owner for every `clientEffectsByTrait` entry — render-ui indexing/slot
     /// writes and `emit` re-dispatch live in `EffectHandlers.apply`, never
     /// duplicated here.
     private lazy var effectHandlers: EffectHandlers = EffectHandlers(viewModel: self)
@@ -341,7 +341,7 @@ class OrbitalViewModel: ObservableObject {
     /// The tick response folds like a dispatch response; each tick `emit` cascade folds (and posts
     /// its server leg) exactly like a tapped event on the emitting trait.
     private func foldFrame(_ frame: KernelFrameResult) {
-        foldResponse(frame.response, requestTrait: frame.fired.first?.trait ?? "")
+        foldResponse(frame.response)
         for dispatch in frame.dispatches {
             fold(result: dispatch.result, requestTrait: dispatch.trait, entityId: nil)
         }
@@ -470,20 +470,22 @@ class OrbitalViewModel: ObservableObject {
     /// The one fold of a kernel `EventResponse` into view-model state: a
     /// dispatch and an applied server response both land through here, so a
     /// cascade run by either repaints from the same code.
-    private func foldResponse(_ response: KernelEventResponse, requestTrait: String) {
+    private func foldResponse(_ response: KernelEventResponse) {
         states.merge(response.states) { _, new in new }
         if let data = response.data {
             entityData.merge(data) { _, new in new }
         }
         if let entityByTrait = response.entityByTrait {
-            fields.merge(entityByTrait) { _, new in new }
-        }
-        if let effects = response.clientEffects {
-            let sources = response.clientEffectsByTrait ?? []
-            for (index, effect) in effects.enumerated() {
-                let source = index < sources.count ? sources[index].dictValue?["traitName"]?.stringValue : nil
-                effectHandlers.apply(effect: effect, requestTrait: source ?? requestTrait)
+            for (trait, written) in entityByTrait {
+                guard let writtenFields = written.dictValue else { continue }
+                var row = fields[trait]?.dictValue ?? [:]
+                row.merge(writtenFields) { _, new in new }
+                fields[trait] = .dict(row)
             }
+        }
+        for entry in response.clientEffectsByTrait ?? [] {
+            guard let dict = entry.dictValue, let trait = dict["traitName"]?.stringValue, let effect = dict["effect"] else { continue }
+            effectHandlers.apply(effect: effect, requestTrait: trait)
         }
         paintGeneration += 1
 #if DEBUG
@@ -499,7 +501,7 @@ class OrbitalViewModel: ObservableObject {
     /// every emit out to its listeners inside this same dispatch call, so it
     /// is never re-dispatched here.
     private func fold(result: KernelDispatchResult, requestTrait: String, entityId: String?) {
-        foldResponse(result.response, requestTrait: requestTrait)
+        foldResponse(result.response)
         let awaitToken = beginAwaiting(result.awaiting.flatMap(AwaitRenders.matching), legs: result.serverLegs.count)
 
         switch result.mode {
@@ -614,7 +616,7 @@ class OrbitalViewModel: ObservableObject {
                     for pair in applied.applied {
                         self.states[pair.trait] = pair.event
                     }
-                    self.foldResponse(applied.response, requestTrait: requestTrait)
+                    self.foldResponse(applied.response)
                     OrbitalViewModel.eventLog.info("applied server response for \(requestTrait, privacy: .public): \(applied.applied.map { $0.trait }.joined(separator: ","), privacy: .public)")
                     outcome(.applied)
                 case .success(let posted):
@@ -635,7 +637,7 @@ class OrbitalViewModel: ObservableObject {
         if let kernel = kernel, let snapshot = snapshot {
             let repaint = kernel.restore(trait: trait, entityId: entityId, snapshot: snapshot)
             states[trait] = snapshot.state
-            if let repaint = repaint { foldResponse(repaint, requestTrait: trait) }
+            if let repaint = repaint { foldResponse(repaint) }
         } else {
             kernel?.abandonServerLeg(trait: trait, event: event, error: message)
         }

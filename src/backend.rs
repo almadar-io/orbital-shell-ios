@@ -2386,8 +2386,8 @@ mod tests {
             "case .success(let posted) where posted.response.success:",
             "case .success(let posted):",
         );
-        assert!(success.contains("self.foldResponse(applied.response, requestTrait: requestTrait)"));
-        assert!(content.contains("foldResponse(result.response, requestTrait: requestTrait)"));
+        assert!(success.contains("self.foldResponse(applied.response)"));
+        assert!(content.contains("foldResponse(result.response)"));
         assert_eq!(content.matches("func foldResponse(").count(), 1);
         assert_eq!(content.matches("effectHandlers.apply(effect:").count(), 1);
         let failure = fold_arm(

@@ -8,7 +8,7 @@ class EffectHandlers {
         self.viewModel = viewModel
     }
 
-    /// Applies one `clientEffects` entry — the sole owner of render-ui
+    /// Applies one `clientEffectsByTrait` entry's effect — the sole owner of render-ui
     /// indexing/slot-writing and `emit` re-dispatch (mirrors `ClientCore`'s
     /// `execute_client_effect` + its render-ui indexing pass in
     /// `process_response`). `requestTrait` is the trait the event that

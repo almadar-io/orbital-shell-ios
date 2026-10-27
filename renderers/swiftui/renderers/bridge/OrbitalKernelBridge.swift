@@ -196,7 +196,6 @@ struct KernelEventResponse: Codable {
     let emittedEvents: [KernelEmittedEvent]
     let data: [String: [AnyCodable]]?
     let entityByTrait: [String: AnyCodable]?
-    let clientEffects: [AnyCodable]?
     let clientEffectsByTrait: [AnyCodable]?
     let effectResults: [AnyCodable]?
     let guardFailed: String?
