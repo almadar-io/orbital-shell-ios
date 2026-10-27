@@ -2843,7 +2843,7 @@ mod tests {
                 let mut f = OirField::new("nickName", OirType::String);
                 f.required = false;
                 f
-            }],
+            }].into(),
         };
         let (ty, hoisted) = oir_type_to_swift_hoisted(&struct_ty, "UserProfile");
         assert_eq!(ty, "UserProfile");
@@ -2860,17 +2860,17 @@ mod tests {
                     "book",
                     OirType::Struct {
                         additional: None,
-                        fields: vec![OirField::new("kind", OirType::String)],
+                        fields: vec![OirField::new("kind", OirType::String)].into(),
                     },
                 ),
                 OirField::new(
                     "movie",
                     OirType::Struct {
                         additional: None,
-                        fields: vec![OirField::new("kind", OirType::String)],
+                        fields: vec![OirField::new("kind", OirType::String)].into(),
                     },
                 ),
-            ],
+            ].into(),
         };
         let (ty, hoisted) = oir_type_to_swift_hoisted(&union_ty, "UserItem");
         assert_eq!(ty, "UserItem");
@@ -2957,7 +2957,7 @@ mod tests {
                 // The wrapper is authoritative regardless of `required`.
                 f.required = true;
                 f
-            }],
+            }].into(),
         };
         let (_, hoisted) = oir_type_to_swift_hoisted(&struct_ty, "UserProfile");
         assert_eq!(
