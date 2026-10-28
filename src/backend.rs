@@ -1671,7 +1671,6 @@ mod tests {
     use super::*;
     use orbital_core_base::ir::{OirEvent, OirPage, OirState, OirTrait, OirTraitBinding};
     use orbital_core_base::schema::{RestServiceDefInner, ServiceDefinition, ServiceRef};
-    use std::collections::HashMap;
 
     fn trait_rendering_main(name: &str, children: &[&str]) -> orbital_core_base::ir::OirTrait {
         use orbital_core_base::ir::{OirEffect, OirExpr, OirPattern, OirTransition, OirValue};
@@ -2566,7 +2565,7 @@ mod tests {
 
     #[test]
     fn test_service_config_generation() {
-        let mut headers = HashMap::new();
+        let mut headers = orbital_core_base::collections::IndexMap::new();
         headers.insert("Authorization".to_string(), "Bearer token".to_string());
 
         let service_ref = ServiceRef::Inline(ServiceDefinition::Rest(RestServiceDefInner {
