@@ -631,8 +631,7 @@ fn generate_view_model_file(module: &OirModule) -> GeneratedFile {
             .join(", ")
     );
     let start_route = module
-        .pages
-        .first()
+        .initial_page()
         .map(|p| escape_double_quoted(&p.path))
         .unwrap_or_else(|| "/".to_string());
 
@@ -2512,6 +2511,17 @@ mod tests {
         let guard_at = body.find("guard let").unwrap();
         let nav_at = body.find("replaceRoot(with: route)").unwrap();
         assert!(guard_at < nav_at);
+    }
+
+    #[test]
+    fn start_route_is_the_initial_page_else_the_first() {
+        let mut module = module_with_pages(&[("Home", "/home"), ("Scorecard", "/scorecard")]);
+        module.pages[1].is_initial = true;
+        let vm = generate_view_model_file(&module).content;
+        assert!(vm.contains(r#"startRoute = "/scorecard""#));
+        module.pages[1].is_initial = false;
+        let vm = generate_view_model_file(&module).content;
+        assert!(vm.contains(r#"startRoute = "/home""#));
     }
 
     /// The initial route REPLACES the stack root (a push leaves a stray back chevron over the
