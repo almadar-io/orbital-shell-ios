@@ -42,7 +42,7 @@ class OrbitalAPI {
         self.baseUrl = baseUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 
-    /// Auth hook: the signed-in session's ID token (`OrbitalAuth`), or the DEBUG verify
+    /// Auth hook: the signed-in session's ID token (`OrbitalAuth`), or the DEBUG launch
     /// persona's. Every request below then sends it; `nil` means anonymous requests.
     func setAuthToken(_ token: String?) {
         tokenLock.lock()

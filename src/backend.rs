@@ -1148,7 +1148,7 @@ struct GeneratedPage: View {{
         viewModel.mainOrderWithAwaiting.filter {{ traitNames.contains($0) }}
     }}
 
-    /// The trait events fall back to and the verify bridge routes to: the most recent
+    /// The trait events fall back to: the most recent
     /// `main` writer on this page, else the last live trait, else the first declared one.
     private var traitName: String {{
         if let writer = viewModel.lastMainWriter, liveTraits.contains(writer) {{ return writer }}
@@ -2231,8 +2231,7 @@ mod tests {
     }
 
     /// `hybridClientOnly` (a `local` seed) posts only the leg the kernel produced
-    /// for its cascade's server-bound traits, and a failed post abandons it
-    /// (no snapshot), so the verify bridge's pending count always returns to idle.
+    /// for its cascade's server-bound traits (no snapshot to restore).
     #[test]
     fn view_model_hybrid_local_posts_only_its_cascade_leg_and_accounts_for_it() {
         let module = OirModule::new("TestApp", "1.0.0");
@@ -2264,8 +2263,6 @@ mod tests {
             3
         );
         assert_eq!(content.matches("self?.restoreOnServerFailure(").count(), 3);
-        assert!(content
-            .contains("kernel?.abandonServerLeg(trait: trait, event: event, error: message)"));
     }
 
     /// `RuntimeOptimistic` rolls the pre-dispatch snapshot back on a server
@@ -3205,7 +3202,7 @@ mod tests {
     }
 
     #[test]
-    fn native_sign_in_control_the_verify_persona_token_keeps_the_stored_session_out() {
+    fn native_sign_in_control_the_persona_token_keeps_the_stored_session_out() {
         let content = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
         let restore = content.find("private func restoreSession()").unwrap();
         let body = &content[restore..];
@@ -3644,42 +3641,10 @@ mod tests {
     }
 
     #[test]
-    fn server_leg_failure_without_a_snapshot_abandons_and_with_one_restores() {
-        let vm = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
-        let restore = fold_arm(
-            &vm,
-            "private func restoreOnServerFailure(",
-            "alertMessage = message",
-        );
-        let restored = restore.find("kernel.restore(trait: trait").unwrap();
-        let else_at = restore.find("} else {").unwrap();
-        let abandon = restore
-            .find("kernel?.abandonServerLeg(trait: trait, event: event, error: message)")
-            .unwrap();
-        assert!(restored < else_at && else_at < abandon);
-        let success = fold_arm(
-            &vm,
-            "case .success(let posted) where posted.response.success:",
-            "case .success(let posted):",
-        );
-        assert!(!success.contains("abandonServerLeg"));
-    }
-
-    #[test]
     fn start_route_without_pages_is_the_bare_root() {
         let vm = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
         assert!(vm.contains("private static let startRoute = \"/\""));
         assert!(vm.contains("private static let knownRoutes: [String] = []"));
-    }
-
-    #[test]
-    fn kernel_bridge_wraps_abandon() {
-        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
-        assert!(bridge.contains("@_silgen_name(\"orbital_kernel_abandon_server_leg\")"));
-        let abandon = bridge
-            .find("orbital_kernel_abandon_server_leg(handle, traitPtr, eventPtr, errorPtr)")
-            .unwrap();
-        assert!(!inside_debug_block(bridge, abandon));
     }
 
     /// Snapshots are component-sized in one shared column: no per-pattern or

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Accessibility identifiers of the host sign-in route, addressed by the verify driver's `/tap` and `/type`.
+/// Accessibility identifiers of the host sign-in route, addressed by UI tests.
 enum SignInIds {
     static let title = "signin-title"
     static let email = "field-signin-email"

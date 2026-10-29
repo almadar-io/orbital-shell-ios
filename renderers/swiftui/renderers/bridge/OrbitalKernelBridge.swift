@@ -53,14 +53,6 @@ func orbital_kernel_restore(
     _ snapshotJson: UnsafePointer<CChar>?
 ) -> UnsafeMutablePointer<CChar>?
 
-@_silgen_name("orbital_kernel_abandon_server_leg")
-func orbital_kernel_abandon_server_leg(
-    _ handle: OrbitalKernelHandleRef?,
-    _ traitName: UnsafePointer<CChar>?,
-    _ event: UnsafePointer<CChar>?,
-    _ error: UnsafePointer<CChar>?
-)
-
 @_silgen_name("orbital_kernel_frames_since")
 func orbital_kernel_frames_since(_ handle: OrbitalKernelHandleRef?, _ since: UInt64) -> UnsafeMutablePointer<CChar>?
 
@@ -512,18 +504,6 @@ final class OrbitalKernel {
         guard let data = consume(raw) else { return nil }
         guard let wire = try? JSONDecoder().decode(KernelAppliedResult.Wire.self, from: data) else { return nil }
         return KernelAppliedResult(applied: decodePairs(wire.applied), response: wire.response, resync: wire.resync, serverLegs: wire.serverLegs)
-    }
-
-    /// A server leg failed at transport level with no snapshot to restore: lowers the
-    /// verify bridge's `pending` and journals `server-leg-failed`. Inert in release builds.
-    func abandonServerLeg(trait: String, event: String, error: String) {
-        trait.withCString { traitPtr in
-            event.withCString { eventPtr in
-                error.withCString { errorPtr in
-                    orbital_kernel_abandon_server_leg(handle, traitPtr, eventPtr, errorPtr)
-                }
-            }
-        }
     }
 
     /// Roll `trait` back; returns the repaint the rollback owes traits bound to its entity.

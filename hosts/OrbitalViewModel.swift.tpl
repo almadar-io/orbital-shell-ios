@@ -171,7 +171,7 @@ class OrbitalViewModel: ObservableObject {
         motion = snap.motion
     }
 
-    /// What the host's auth has resolved the viewer to be. A DEBUG launch carrying the verify persona
+    /// What the host's auth has resolved the viewer to be. A DEBUG launch carrying the persona
     /// token is authenticated by it (the stored session is deliberately kept out in that case).
     var isAuthenticated: Bool {
         if session != nil { return true }
@@ -198,8 +198,8 @@ class OrbitalViewModel: ObservableObject {
     }
 
 #if DEBUG
-    /// The verify persona's ID token: a DEBUG build launched with `ORBITAL_AUTH_TOKEN` sends it as
-    /// `Authorization: Bearer` on every request (`orb verify`). Release builds never read it.
+    /// The persona's ID token: a DEBUG build launched with `ORBITAL_AUTH_TOKEN` sends it as
+    /// `Authorization: Bearer` on every request. Release builds never read it.
     static func launchAuthToken() -> String? {
         guard let token = ProcessInfo.processInfo.environment["ORBITAL_AUTH_TOKEN"], !token.isEmpty else { return nil }
         return token
@@ -207,7 +207,7 @@ class OrbitalViewModel: ObservableObject {
 #endif
 
     /// The compiled-in server URL; a DEBUG build launched with
-    /// `ORBITAL_API_BASE_URL` talks to that server instead (`orb verify`).
+    /// `ORBITAL_API_BASE_URL` talks to that server instead.
     static func resolvedBaseUrl() -> String {
 #if DEBUG
         if let override = ProcessInfo.processInfo.environment["ORBITAL_API_BASE_URL"], !override.isEmpty {
@@ -256,7 +256,7 @@ class OrbitalViewModel: ObservableObject {
     }
 
     /// The stored session (Keychain) is adopted before the first INIT so the first requests are signed.
-    /// A DEBUG launch carrying `ORBITAL_AUTH_TOKEN` is the verify persona and keeps it instead.
+    /// A DEBUG launch carrying `ORBITAL_AUTH_TOKEN` is the persona and keeps it instead.
     private func restoreSession() {
         var hasLaunchToken = false
 #if DEBUG
@@ -678,8 +678,6 @@ class OrbitalViewModel: ObservableObject {
             let repaint = kernel.restore(trait: trait, entityId: entityId, snapshot: snapshot)
             states[trait] = snapshot.state
             if let repaint = repaint { foldResponse(repaint) }
-        } else {
-            kernel?.abandonServerLeg(trait: trait, event: event, error: message)
         }
         alertMessage = message
     }
@@ -699,7 +697,7 @@ class OrbitalViewModel: ObservableObject {
     }
 
 #if DEBUG
-    /// `ORBITAL_INITIAL_ROUTE` (a verify launch) replaces the stack root with that page once the
+    /// `ORBITAL_INITIAL_ROUTE` (a debug launch) replaces the stack root with that page once the
     /// kernel is ready, as a web `page.goto` replaces the page: no pushed destination, no back
     /// chevron. The start route itself needs no replacement.
     private func openInitialRouteIfRequested() {
