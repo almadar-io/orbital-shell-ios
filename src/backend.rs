@@ -1242,24 +1242,13 @@ struct GeneratedPage: View {{
         mainBody
             .modifier(AlmadarSurfaceEnter(shape: "pageEnter", timing: .page, replayKey: pageName))
             .verificationContainer(mainSlotId)
-            .task(id: viewModel.paintGeneration) {{ [generation = viewModel.paintGeneration] in
-                viewModel.reportPainted(generation)
-            }}
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(theme.color.background.ignoresSafeArea())
             .onAppear {{
             for name in traitNames where !name.isEmpty {{
                 viewModel.initTrait(trait: name)
             }}
-#if DEBUG
-            if !traitName.isEmpty {{ viewModel.activePageTrait = traitName }}
-#endif
         }}
-#if DEBUG
-        .onChange(of: traitName) {{ newValue in
-            if !newValue.isEmpty {{ viewModel.activePageTrait = newValue }}
-        }}
-#endif
         // --- non-main slot overlays ---
         .sheet(isPresented: Binding(
             get: {{ viewModel.slotsWithAwaiting.keys.contains(where: {{ slotRole($0) == .modal }}) }},
@@ -1747,30 +1736,6 @@ mod tests {
     }
 
     #[test]
-    fn the_bridge_is_idle_only_once_the_page_painted_the_last_fold() {
-        let vm = generate_view_model_file(&awaiting_module()).content;
-        let fold = vm.find("private func foldResponse(").unwrap();
-        let bump = vm[fold..]
-            .find("paintGeneration += 1")
-            .expect("every fold bumps the generation");
-        let folded = vm[fold..]
-            .find("kernel?.setVerifyFolded(paintGeneration)")
-            .unwrap();
-        assert!(bump < folded, "reported after it is bumped");
-        let app = generate_app_file(&awaiting_module()).content;
-        assert!(
-            app.contains(".task(id: viewModel.paintGeneration) { [generation = viewModel.paintGeneration] in\n                viewModel.reportPainted(generation)"),
-            "the page reports the generation it rendered, never a newer one"
-        );
-        let report = vm.find("func reportPainted(").unwrap();
-        assert!(
-            vm[report..].find("#if DEBUG").unwrap()
-                < vm[report..].find("setVerifyPainted").unwrap(),
-            "control: the bridge calls stay out of release builds"
-        );
-    }
-
-    #[test]
     fn the_await_render_table_embeds_the_compilers_predictions() {
         let file = generate_await_renders_file(&awaiting_module());
         assert_eq!(file.path, "AwaitRenders.swift");
@@ -2224,55 +2189,6 @@ mod tests {
         assert!(remount < first_init, "remount must precede the INIT loop");
     }
 
-    /// The bridge is told the host is mounting before the first `INIT` and mounted after the last,
-    /// so `/idle` cannot answer idle between the app launching and its INIT legs being counted.
-    #[test]
-    fn init_all_traits_brackets_the_init_loop_with_verify_ready() {
-        let module = OirModule::new("TestApp", "1.0.0");
-        let whole = generate_view_model_file(&module).content;
-        let start = whole.find("func initAllTraits()").unwrap();
-        let end = start + whole[start..].find("\n    }\n").unwrap();
-        let content = whole[..end].to_string();
-        let not_ready = content
-            .find("kernel?.setVerifyReady(false)")
-            .expect("ready=false");
-        let remount = content
-            .find("kernel?.remount(traits: OrbitalViewModel.traitsWithInit)")
-            .unwrap();
-        let first_init = content
-            .find(r#"sendEvent(trait: trait, event: "INIT")"#)
-            .unwrap();
-        let ready = content
-            .find("kernel?.setVerifyReady(true)")
-            .expect("ready=true");
-        assert!(not_ready < remount && remount < first_init && first_init < ready);
-        assert_eq!(
-            whole.matches("setVerifyReady(").count(),
-            4,
-            "only the INIT brackets (app mount + a gated page mount) flip readiness"
-        );
-        assert!(inside_debug_block(&content, not_ready));
-        assert!(inside_debug_block(&content, ready));
-        let gated = &whole[whole.find("func mountGatedPage").unwrap()..];
-        assert!(
-            gated.find("setVerifyReady(false)").unwrap()
-                < gated.find("kernel?.mount(traits: pending)").unwrap()
-        );
-    }
-
-    /// Control: the readiness bracket is DEBUG-only, so a release shell never references the symbol.
-    #[test]
-    fn verify_ready_never_escapes_debug() {
-        let module = OirModule::new("TestApp", "1.0.0");
-        let content = generate_view_model_file(&module).content;
-        for (at, _) in content.match_indices("setVerifyReady(") {
-            assert!(
-                inside_debug_block(&content, at),
-                "setVerifyReady at {at} escapes #if DEBUG"
-            );
-        }
-    }
-
     /// The view model owns one `OrbitalKernel` handle for its whole
     /// lifetime (B5/B7) — every dispatch/init/live-push path reads it,
     /// never a second kernel or a direct HTTP call for a local dispatch.
@@ -2578,7 +2494,7 @@ mod tests {
         let replace = fold_arm(
             &vm,
             "private func replaceRoot(with path: String)",
-            "/// Publishes the current route",
+            "#endif",
         );
         assert!(replace.contains("routeStack = []"));
         assert!(replace.contains("rootRoute = path"));
@@ -3105,61 +3021,6 @@ mod tests {
     }
 
     #[test]
-    fn verify_bridge_start_is_debug_only_and_env_gated() {
-        let module = OirModule::new("TestApp", "1.0.0");
-        let content = generate_view_model_file(&module).content;
-        assert!(content.contains(r#"env["ORBITAL_VERIFY_BRIDGE"] == "1""#));
-        let guard_at = content
-            .find(r#"env["ORBITAL_VERIFY_BRIDGE"] == "1""#)
-            .unwrap();
-        let still_at = content
-            .find("UIView.setAnimationsEnabled(false)")
-            .expect("verify launches settle without animation");
-        assert!(
-            guard_at < still_at,
-            "control: a normal launch keeps its animations"
-        );
-        assert!(content.contains(r#"env["ORBITAL_VERIFY_PORT"]"#));
-        assert!(content.contains("?? 7357"));
-        for needle in [
-            "startVerifyBridgeIfRequested()",
-            "kernel.startVerifyBridge(",
-            "handleVerifyDispatch(",
-        ] {
-            let mut found = 0;
-            for (at, _) in content.match_indices(needle) {
-                found += 1;
-                assert!(
-                    inside_debug_block(&content, at),
-                    "`{needle}` at {at} escapes #if DEBUG"
-                );
-            }
-            assert!(found > 0, "`{needle}` never emitted");
-        }
-    }
-
-    #[test]
-    fn verify_bridge_starts_after_the_kernel_mounts_and_before_the_first_init() {
-        let module = OirModule::new("TestApp", "1.0.0");
-        let content = generate_view_model_file(&module).content;
-        let start = content.find("self.startVerifyBridgeIfRequested()").unwrap();
-        let init_all = content.find("self.initAllTraits()").unwrap();
-        let mounted = content.find("self.kernel = kernel").unwrap();
-        assert!(mounted < start && start < init_all);
-    }
-
-    #[test]
-    fn verify_dispatch_routes_through_send_event_with_scope_or_active_page() {
-        let module = OirModule::new("TestApp", "1.0.0");
-        let content = generate_view_model_file(&module).content;
-        assert!(content.contains("guard let trait = traitScope ?? activePageTrait"));
-        assert!(content.contains("sendEvent(trait: trait, event: event, payload: payload)"));
-        assert!(!content.contains(
-            "kernel.dispatch(trait: trait, entityId: nil, event: event, payloadJSON: json"
-        ));
-    }
-
-    #[test]
     fn page_passes_every_bound_trait_so_a_non_leading_trait_can_own_main() {
         let mut module = OirModule::new("TestApp", "1.0.0");
         let mut page = OirPage::new("Browse", "/threadposts");
@@ -3236,40 +3097,6 @@ mod tests {
             "if let writer = viewModel.lastMainWriter, liveTraits.contains(writer) { return writer }"
         ));
         assert!(app.contains("return liveTraits.last ?? traitNames.first ?? \"\""));
-    }
-
-    #[test]
-    fn page_publishes_its_trait_as_the_active_one_in_debug_builds_only() {
-        let module = OirModule::new("TestApp", "1.0.0");
-        let app = generate_app_file(&module);
-        let at = app
-            .content
-            .find("viewModel.activePageTrait = traitName")
-            .expect("page sets activePageTrait");
-        assert!(inside_debug_block(&app.content, at));
-    }
-
-    #[test]
-    fn kernel_bridge_declares_the_verify_bridge_symbols_and_wraps_them_in_debug() {
-        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
-        for symbol in orbital_ffi::kernel_c_api::VERIFY_BRIDGE_C_SYMBOLS {
-            assert!(
-                bridge.contains(&format!("@_silgen_name(\"{symbol}\")")),
-                "missing {symbol}"
-            );
-        }
-        for needle in [
-            "orbital_verify_bridge_start(handle",
-            "orbital_verify_bridge_stop(handle",
-            "orbital_verify_bridge_set_dispatch_callback(handle",
-            "orbital_verify_bridge_set_route(handle",
-            "orbital_verify_bridge_set_ready(handle",
-        ] {
-            let at = bridge
-                .find(needle)
-                .unwrap_or_else(|| panic!("wrapper calling {needle} missing"));
-            assert!(inside_debug_block(bridge, at), "{needle} escapes #if DEBUG");
-        }
     }
 
     /// Item 2 of G-ORB-COMPILER-038 stays open: a renderer's `eventEnvelope` copies the node's
@@ -3839,28 +3666,6 @@ mod tests {
     }
 
     #[test]
-    fn route_is_published_on_every_navigation_change_in_debug_builds_only() {
-        let module = module_with_pages(&[("Home", "/home"), ("Notes", "/notes")]);
-        let vm = generate_view_model_file(&module).content;
-        assert!(vm.contains("private static let startRoute = \"/home\""));
-        assert!(vm.contains("didSet { syncRoute() }"));
-        for needle in [
-            "publishRoute()",
-            "kernel?.setVerifyRoute(routeStack.last ?? rootRoute)",
-        ] {
-            for (at, _) in vm.match_indices(needle) {
-                assert!(inside_debug_block(&vm, at), "`{needle}` escapes #if DEBUG");
-            }
-        }
-        let sync = fold_arm(
-            &vm,
-            "private func syncRoute()",
-            "/// Mirrors `ClientKernel`",
-        );
-        assert!(sync.contains("routeStack.removeLast(routeStack.count - navigationPath.count)"));
-    }
-
-    #[test]
     fn start_route_without_pages_is_the_bare_root() {
         let vm = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
         assert!(vm.contains("private static let startRoute = \"/\""));
@@ -3868,13 +3673,9 @@ mod tests {
     }
 
     #[test]
-    fn kernel_bridge_wraps_abandon_and_set_route() {
+    fn kernel_bridge_wraps_abandon() {
         let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
         assert!(bridge.contains("@_silgen_name(\"orbital_kernel_abandon_server_leg\")"));
-        let at = bridge
-            .find("orbital_verify_bridge_set_route(handle, $0)")
-            .unwrap();
-        assert!(inside_debug_block(bridge, at));
         let abandon = bridge
             .find("orbital_kernel_abandon_server_leg(handle, traitPtr, eventPtr, errorPtr)")
             .unwrap();

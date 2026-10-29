@@ -513,119 +513,14 @@ mod tests {
     }
 
     #[test]
-    fn template_ships_the_generic_verify_driver_and_no_notes_specific_ui_test() {
-        let project = template_file("project.yml");
-        assert!(project.contains("{{APP_CLASS_NAME}}VerifyDriver:"));
-        assert!(project.contains("Sources/OrbitalAppVerifyDriver"));
-        assert!(!project.contains("UITests"));
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("templates/ios-shell/Sources");
-        assert!(!root.join("OrbitalAppUITests").exists());
-        assert!(root
-            .join("OrbitalAppVerifyDriver/VerifyDriver.swift")
-            .is_file());
-    }
-
-    #[test]
-    fn driver_types_into_the_fields_input_and_answers_instead_of_crashing_without_focus() {
-        let driver = template_file("Sources/OrbitalAppVerifyDriver/VerifyDriver.swift");
-        let body = &driver[driver.find("private func type(").unwrap()..];
-        let body = &body[..body.find("\n    }\n").unwrap()];
-        assert!(
-            body.contains("let input = editable(target)"),
-            "a field id stamps its container"
-        );
-        assert!(
-            body.contains("guard waitForKeyboardFocus(input) else {"),
-            "XCUITest ends the driver on a type with no keyboard focus, so the route checks first"
-        );
-        assert!(body.contains("input.typeText(text)"));
-        assert!(
-            !body.contains("app.typeText("),
-            "control: never typed into the app at large"
-        );
-        assert!(driver.contains("private func editable(_ element: XCUIElement) -> XCUIElement {"));
-    }
-
-    #[test]
-    fn verify_driver_never_queries_xcuielement_hittability() {
-        let driver = template_file("Sources/OrbitalAppVerifyDriver/VerifyDriver.swift");
-        let code: String = driver
-            .lines()
-            .filter(|l| !l.trim_start().starts_with("//"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        assert!(
-            !code.contains(".isHittable"),
-            "isHittable raises a test failure that ends the driver"
-        );
-        assert!(
-            !code.contains("target.tap()"),
-            "element tap() needs an activation point; tap the frame centre"
-        );
-        assert!(
-            code.contains("point(visible.midX, visible.midY)"),
-            "taps, presses and swipes act on the frame centre"
-        );
-        assert!(code.contains("withOffset(CGVector(dx: x, dy: y))"));
-        assert!(code.contains("frame.intersection(screen)"));
-    }
-
-    #[test]
-    fn verify_driver_serves_every_documented_route_and_launches_with_the_bridge_env() {
-        let driver = template_file("Sources/OrbitalAppVerifyDriver/VerifyDriver.swift");
-        for route in ["/longpress", "/swipe"] {
-            assert!(
-                driver.contains(&format!(r#"case ("POST", "{route}"):"#)),
-                "{route}"
-            );
-        }
-        assert!(
-            driver.contains("press(forDuration: 0.8)"),
-            "a long press holds past the threshold"
-        );
-        assert!(
-            driver.contains("thenDragTo"),
-            "a swipe drags across the element"
-        );
-        for route in [
-            "/health",
-            "/tree",
-            "/tap",
-            "/type",
-            "/screenshot",
-            "/relaunch",
-            "/stop",
-        ] {
-            assert!(
-                driver.contains(&format!("\"{route}\"")),
-                "driver lacks {route}"
-            );
-        }
-        assert!(driver.contains(r#""ORBITAL_VERIFY_BRIDGE": "1""#));
-        assert!(driver.contains("environment.merge(overrides) { _, new in new }"));
-        assert!(driver.contains(r#"body["env"]"#));
-        assert!(driver.contains("app.launchEnvironment = environment"));
-        assert!(driver.contains("if !request.body.isEmpty {"));
-        assert!(driver.contains(r#"env["ORBITAL_VERIFY_PORT"]"#));
-        assert!(driver.contains(r#"env["ORBITAL_DRIVER_PORT"]"#));
-        assert!(driver.contains("?? 7358"));
-        assert!(driver.contains(r#".matching(identifier: within).firstMatch"#));
-        assert!(!driver.contains("New Note"));
-    }
-
-    #[test]
-    fn orb_build_delegates_device_lifecycle_to_the_shared_script_and_adds_driver_mode() {
+    fn orb_build_delegates_device_lifecycle_to_the_shared_script() {
         let build = template_file("orb-build.sh");
         assert!(build.contains("ios-device.sh"));
         assert!(
             !build.contains("simctl"),
             "simctl logic must live only in scripts/native/ios-device.sh"
         );
-        assert!(build.contains(r#""$1" == "--driver""#));
-        assert!(build.contains("test-without-building"));
-        assert!(build.contains(r#"-only-testing:"${APP_NAME}VerifyDriver""#));
-        assert!(build.contains("TEST_RUNNER_ORBITAL_DRIVER_PORT"));
+        assert!(!build.contains("--driver"));
         assert!(!build.contains("--uitest"));
     }
 

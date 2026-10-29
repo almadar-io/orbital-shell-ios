@@ -10,15 +10,9 @@ class OrbitalViewModel: ObservableObject {
     /// `traitContent[pageTrait]`; peer traits that render only to an overlay
     /// slot are still indexed here so a splice can reach them.
     @Published var traitContent: [String: AnyCodable] = [:]
-    /// Bumped on every fold; the page reports each generation once it is on screen, so the
-    /// verify bridge is idle only when the screen matches the kernel.
+    /// Bumped on every fold.
     @Published private(set) var paintGeneration: UInt64 = 0
 
-    func reportPainted(_ generation: UInt64) {
-#if DEBUG
-        kernel?.setVerifyPainted(generation)
-#endif
-    }
     /// Predicted skeletons (`AwaitRenders`) of round trips that have outlasted the theme's busy
     /// delay: by the trait that will render `main`, and by any other slot name.
     @Published private(set) var awaitingMain: [String: AwaitRender] = [:]
@@ -249,9 +243,6 @@ class OrbitalViewModel: ObservableObject {
                 self.apply(resolvedTheme: snap.theme)
                 self.canvasTheme = snap.canvasTheme
                 self.motion = snap.motion
-#if DEBUG
-                self.startVerifyBridgeIfRequested()
-#endif
                 self.restoreSession()
                 self.openLivePush()
                 self.initAllTraits()
@@ -407,9 +398,6 @@ class OrbitalViewModel: ObservableObject {
         if navigationPath.count < routeStack.count {
             routeStack.removeLast(routeStack.count - navigationPath.count)
         }
-#if DEBUG
-        publishRoute()
-#endif
     }
 
     /// Mirrors `ClientKernel`/`ClientCore::init_all_traits_blocking`: `INIT`
@@ -420,17 +408,11 @@ class OrbitalViewModel: ObservableObject {
     func initAllTraits() {
         guard !didInitAllTraits else { return }
         didInitAllTraits = true
-#if DEBUG
-        kernel?.setVerifyReady(false)
-#endif
         kernel?.remount(traits: OrbitalViewModel.traitsWithInit)
         for trait in OrbitalViewModel.traitsWithInit {
             initTrait(trait: trait)
             sendEvent(trait: trait, event: "INIT")
         }
-#if DEBUG
-        kernel?.setVerifyReady(true)
-#endif
         if let gated = pendingGatedMount {
             pendingGatedMount = nil
             mountGatedPage(path: gated.path, viewer: gated.viewer)
@@ -447,18 +429,12 @@ class OrbitalViewModel: ObservableObject {
         }
         let pending = (OrbitalViewModel.gatedPageTraits[path] ?? []).filter { gatedInitViewer[$0] != viewer }
         if pending.isEmpty { return }
-#if DEBUG
-        kernel?.setVerifyReady(false)
-#endif
         kernel?.mount(traits: pending)
         for trait in pending {
             gatedInitViewer[trait] = viewer
             initTrait(trait: trait)
             sendEvent(trait: trait, event: "INIT")
         }
-#if DEBUG
-        kernel?.setVerifyReady(true)
-#endif
     }
 
     /// The ONLY dispatch entry point — every control's event and `initTrait`
@@ -498,9 +474,6 @@ class OrbitalViewModel: ObservableObject {
             effectHandlers.apply(effect: effect, requestTrait: trait)
         }
         paintGeneration += 1
-#if DEBUG
-        kernel?.setVerifyFolded(paintGeneration)
-#endif
     }
 
     /// The ONE fold every dispatch (local, live-push) runs through. The
@@ -726,46 +699,12 @@ class OrbitalViewModel: ObservableObject {
     }
 
 #if DEBUG
-    /// Set by `GeneratedPage.onAppear`: the trait a verify-bridge `/send` without
-    /// a `traitScope` routes to, as a tap on the visible page would.
-    var activePageTrait: String?
-
-    /// Starts the `orbital-ffi` verify bridge when the launch environment carries
-    /// `ORBITAL_VERIFY_BRIDGE=1` (port from `ORBITAL_VERIFY_PORT`, default 7357).
-    /// Debug builds only.
-    private func startVerifyBridgeIfRequested() {
-        let env = ProcessInfo.processInfo.environment
-        guard env["ORBITAL_VERIFY_BRIDGE"] == "1", let kernel = kernel else { return }
-        // A verify launch presents and dismisses without animation, so the screen a settled
-        // `/idle` snapshot reads is the final one (a sheet still sliding out reads as mounted).
-        UIView.setAnimationsEnabled(false)
-        let port = UInt16(env["ORBITAL_VERIFY_PORT"] ?? "") ?? 7357
-        let bound = kernel.startVerifyBridge(port: port)
-        guard bound > 0 else {
-            OrbitalViewModel.eventLog.error("verify bridge failed to start on \(port, privacy: .public): \(kernel.lastError, privacy: .public)")
-            return
-        }
-        OrbitalViewModel.eventLog.info("verify bridge listening on 127.0.0.1:\(bound, privacy: .public)")
-        publishRoute()
-        kernel.setVerifyDispatchCallback({ ctx, scope, event, payload in
-            guard let ctx = ctx, let event = event else { return }
-            let viewModel = Unmanaged<OrbitalViewModel>.fromOpaque(ctx).takeUnretainedValue()
-            let traitScope = scope.map { String(cString: $0) }
-            let eventName = String(cString: event)
-            let payloadJSON = payload.map { String(cString: $0) }
-            DispatchQueue.main.async {
-                viewModel.handleVerifyDispatch(traitScope: traitScope, event: eventName, payloadJSON: payloadJSON)
-            }
-        }, ctx: Unmanaged.passUnretained(self).toOpaque())
-    }
-
     /// `ORBITAL_INITIAL_ROUTE` (a verify launch) replaces the stack root with that page once the
     /// kernel is ready, as a web `page.goto` replaces the page: no pushed destination, no back
     /// chevron. The start route itself needs no replacement.
     private func openInitialRouteIfRequested() {
         guard let route = ProcessInfo.processInfo.environment["ORBITAL_INITIAL_ROUTE"], !route.isEmpty else { return }
         if route != OrbitalViewModel.startRoute { replaceRoot(with: route) }
-        publishRoute()
     }
 
     private func replaceRoot(with path: String) {
@@ -775,28 +714,6 @@ class OrbitalViewModel: ObservableObject {
         routeStack = []
         rootRoute = path
         navigationPath = NavigationPath()
-    }
-
-    /// Publishes the current route (top of the navigation stack, else the start page) to the bridge.
-    private func publishRoute() {
-        kernel?.setVerifyRoute(routeStack.last ?? rootRoute)
-    }
-
-    /// A bridge `/send` takes the SAME entry point a renderer's `onEvent` ends in.
-    private func handleVerifyDispatch(traitScope: String?, event: String, payloadJSON: String?) {
-        guard let trait = traitScope ?? activePageTrait else {
-            OrbitalViewModel.eventLog.error("verify send \(event, privacy: .public) dropped: no traitScope and no active page")
-            return
-        }
-        var payload: AnyCodable?
-        if let json = payloadJSON {
-            guard let decoded = try? JSONDecoder().decode(AnyCodable.self, from: Data(json.utf8)) else {
-                OrbitalViewModel.eventLog.error("verify send \(event, privacy: .public) dropped: payload is not valid json")
-                return
-            }
-            payload = decoded
-        }
-        sendEvent(trait: trait, event: event, payload: payload)
     }
 #endif
 

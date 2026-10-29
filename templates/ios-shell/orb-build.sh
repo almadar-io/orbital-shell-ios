@@ -45,45 +45,8 @@ if [[ "$1" == "--test" ]]; then
     "$DEVICE_SCRIPT" require
     echo "Running XCTest suite on \"$SIM_DEVICE\"..."
     xcodebuild test -scheme "${APP_NAME}" -destination "platform=iOS Simulator,name=${SIM_DEVICE}" \
-        -skip-testing:"${APP_NAME}VerifyDriver" CARGO_BUILD_DIR="${CARGO_BUILD_DIR}" "${AUTH_SETTINGS[@]}"
+        CARGO_BUILD_DIR="${CARGO_BUILD_DIR}" "${AUTH_SETTINGS[@]}"
     exit $?
-fi
-
-if [[ "$1" == "--driver" ]]; then
-    # `orb verify` tap driver: builds for testing, then runs the long-lived
-    # {{APP_CLASS_NAME}}VerifyDriver test in the background. It launches the app with the
-    # verify bridge on and serves HTTP+JSON on 127.0.0.1:$ORBITAL_DRIVER_PORT
-    # (/health /tree /tap /type /screenshot /relaunch /stop). Build the Rust lib
-    # with `make ios-lib VERIFY=1` first so the bridge is compiled in.
-    DRIVER_PORT="${ORBITAL_DRIVER_PORT:-7358}"
-    VERIFY_PORT="${ORBITAL_VERIFY_PORT:-7357}"
-    DRIVER_LOG="${ORB_DRIVER_LOG:-./orb-driver.log}"
-    DRIVER_WAIT_SECONDS="${ORB_DRIVER_WAIT_SECONDS:-300}"
-    "$DEVICE_SCRIPT" boot
-    TEST_DESTINATION="platform=iOS Simulator,name=${SIM_DEVICE}"
-    echo "Building for testing..."
-    xcodebuild build-for-testing -scheme "${APP_NAME}" -destination "${TEST_DESTINATION}" CARGO_BUILD_DIR="${CARGO_BUILD_DIR}" "${AUTH_SETTINGS[@]}"
-    echo "Starting the verify driver (log: $DRIVER_LOG)..."
-    TEST_RUNNER_ORBITAL_DRIVER_PORT="$DRIVER_PORT" TEST_RUNNER_ORBITAL_VERIFY_PORT="$VERIFY_PORT" \
-        nohup xcodebuild test-without-building -scheme "${APP_NAME}" -destination "${TEST_DESTINATION}" \
-        -only-testing:"${APP_NAME}VerifyDriver" CARGO_BUILD_DIR="${CARGO_BUILD_DIR}" "${AUTH_SETTINGS[@]}" >"$DRIVER_LOG" 2>&1 &
-    DRIVER_PID=$!
-    echo "$DRIVER_PID" > ./orb-driver.pid
-    for _ in $(seq 1 "$DRIVER_WAIT_SECONDS"); do
-        if curl -sf "http://127.0.0.1:${DRIVER_PORT}/health" >/dev/null; then
-            echo "Driver port: ${DRIVER_PORT}"
-            echo "Bridge port: ${VERIFY_PORT}"
-            echo "Driver pid: ${DRIVER_PID}"
-            exit 0
-        fi
-        if ! kill -0 "$DRIVER_PID" 2>/dev/null; then
-            echo "verify driver exited before answering /health; see $DRIVER_LOG"
-            exit 1
-        fi
-        sleep 1
-    done
-    echo "verify driver did not answer /health within ${DRIVER_WAIT_SECONDS}s; see $DRIVER_LOG"
-    exit 1
 fi
 
 if [[ "$1" == "--run" ]]; then

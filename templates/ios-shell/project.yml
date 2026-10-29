@@ -61,20 +61,3 @@ targets:
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
-  {{APP_CLASS_NAME}}VerifyDriver:
-    # `orb verify` tap driver: ONE long-lived UI test that launches the app with the
-    # verify bridge on and serves HTTP+JSON on 127.0.0.1:$ORBITAL_DRIVER_PORT.
-    # Run it with `./orb-build.sh --driver`; it is not part of `--test`.
-    type: bundle.ui-testing
-    platform: iOS
-    deploymentTarget: "16.0"
-    sources:
-      - Sources/OrbitalAppVerifyDriver
-    dependencies:
-      - target: {{APP_CLASS_NAME}}
-    settings:
-      base:
-        GENERATE_INFOPLIST_FILE: YES
-        SWIFT_VERSION: "5.9"
-        TARGETED_DEVICE_FAMILY: "1,2"
-        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64

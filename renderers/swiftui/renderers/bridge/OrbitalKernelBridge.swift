@@ -147,40 +147,6 @@ func orbital_kernel_last_error(_ handle: OrbitalKernelHandleRef?) -> UnsafeMutab
 @_silgen_name("orbital_kernel_free_string")
 func orbital_kernel_free_string(_ s: UnsafeMutablePointer<CChar>?)
 
-// Verify bridge (orbital-ffi `verify-bridge`): exported by every orbital-ffi
-// build (inert stubs unless the feature is on), referenced from DEBUG code only.
-typealias OrbitalVerifyDispatchCallback = @convention(c) (
-    UnsafeMutableRawPointer?,
-    UnsafePointer<CChar>?,
-    UnsafePointer<CChar>?,
-    UnsafePointer<CChar>?
-) -> Void
-
-@_silgen_name("orbital_verify_bridge_start")
-func orbital_verify_bridge_start(_ handle: OrbitalKernelHandleRef?, _ port: UInt16) -> Int32
-
-@_silgen_name("orbital_verify_bridge_stop")
-func orbital_verify_bridge_stop(_ handle: OrbitalKernelHandleRef?)
-
-@_silgen_name("orbital_verify_bridge_set_dispatch_callback")
-func orbital_verify_bridge_set_dispatch_callback(
-    _ handle: OrbitalKernelHandleRef?,
-    _ callback: OrbitalVerifyDispatchCallback?,
-    _ ctx: UnsafeMutableRawPointer?
-) -> Int32
-
-@_silgen_name("orbital_verify_bridge_set_route")
-func orbital_verify_bridge_set_route(_ handle: OrbitalKernelHandleRef?, _ route: UnsafePointer<CChar>?) -> Int32
-
-@_silgen_name("orbital_verify_bridge_set_ready")
-func orbital_verify_bridge_set_ready(_ handle: OrbitalKernelHandleRef?, _ ready: Int32) -> Int32
-
-@_silgen_name("orbital_verify_bridge_folded")
-func orbital_verify_bridge_folded(_ handle: OrbitalKernelHandleRef?, _ generation: UInt64) -> Int32
-
-@_silgen_name("orbital_verify_bridge_painted")
-func orbital_verify_bridge_painted(_ handle: OrbitalKernelHandleRef?, _ generation: UInt64) -> Int32
-
 // MARK: - Wire models (mirror orbital-core's canonical EventResponse/EventRequest/
 // TraitSnapshot/DispatchMode JSON exactly — see kernel_c_api.rs's doc comment for
 // the envelope shape `orbital_kernel_dispatch` returns)
@@ -716,49 +682,6 @@ final class OrbitalKernel {
               let json = String(data: data, encoding: .utf8) else { return }
         json.withCString { orbital_kernel_mount(handle, $0) }
     }
-
-#if DEBUG
-    /// Starts the verify bridge on 127.0.0.1:`port`; returns the bound port, 0 on failure
-    /// (read `lastError`). Debug builds only — never compiled into a release shell.
-    func startVerifyBridge(port: UInt16) -> Int32 {
-        orbital_verify_bridge_start(handle, port)
-    }
-
-    func stopVerifyBridge() {
-        orbital_verify_bridge_stop(handle)
-    }
-
-    /// Registers the host function the bridge's `/send` invokes (on the bridge thread).
-    @discardableResult
-    func setVerifyDispatchCallback(_ callback: OrbitalVerifyDispatchCallback?, ctx: UnsafeMutableRawPointer?) -> Bool {
-        orbital_verify_bridge_set_dispatch_callback(handle, callback, ctx) == 1
-    }
-
-    /// Publishes the current route for the bridge's `/snapshot` and `/route`.
-    @discardableResult
-    func setVerifyRoute(_ route: String) -> Bool {
-        route.withCString { orbital_verify_bridge_set_route(handle, $0) } == 1
-    }
-
-    /// Marks the host mounted (`true`: every page-mount `INIT` has been dispatched) or mounting
-    /// (`false`); the bridge's `/idle` never reports idle while mounting.
-    @discardableResult
-    func setVerifyReady(_ ready: Bool) -> Bool {
-        orbital_verify_bridge_set_ready(handle, ready ? 1 : 0) == 1
-    }
-
-    /// The view state now holds render generation `generation`; `/idle` waits for its paint.
-    @discardableResult
-    func setVerifyFolded(_ generation: UInt64) -> Bool {
-        orbital_verify_bridge_folded(handle, generation) == 1
-    }
-
-    /// The page committed render generation `generation` to the screen.
-    @discardableResult
-    func setVerifyPainted(_ generation: UInt64) -> Bool {
-        orbital_verify_bridge_painted(handle, generation) == 1
-    }
-#endif
 }
 
 /// `String?.withCString` has no stdlib overload — this fills the gap so
