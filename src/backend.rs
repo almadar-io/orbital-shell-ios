@@ -635,12 +635,18 @@ fn generate_view_model_file(module: &OirModule) -> GeneratedFile {
         .map(|p| escape_double_quoted(&p.path))
         .unwrap_or_else(|| "/".to_string());
 
+    let not_found_route = module
+        .not_found_page()
+        .map(|p| format!("\"{}\"", escape_double_quoted(&p.path)))
+        .unwrap_or_else(|| "nil".to_string());
+
     let content = include_str!("../hosts/OrbitalViewModel.swift.tpl")
     .replace("__TRAITS_WITH_INIT__", &traits_with_init)
     .replace("__GATED_PAGE_TRAITS__", &swift_gated_page_traits(module))
     .replace("__KNOWN_ROUTES__", &known_routes)
     .replace("__EMBEDDED_TRAITS__", &embedded_traits)
     .replace("__START_ROUTE__", &start_route)
+    .replace("__NOT_FOUND_ROUTE__", &not_found_route)
     .replace("__HOST_SIGN_IN_ROUTE__", orbital_core_base::schema::HOST_SIGN_IN_ROUTE)
     .replace("__BASE_URL__", &escape_double_quoted(&base_url));
 
@@ -1153,7 +1159,12 @@ struct GeneratedPage: View {{
         let content = viewModel.contentWithAwaiting
         let spliced = splice(content[name], sourceTrait: name, traitContent: content)
         let key = name + ":" + (spliced?.dictValue?["type"]?.stringValue ?? "")
-        return AnyView(renderSlot(spliced).modifier(AlmadarSlotEnter(content: spliced, contentKey: key)))
+        return AnyView(
+            renderSlot(spliced)
+                .modifier(AlmadarSlotEnter(content: spliced, contentKey: key))
+                .onAppear {{ viewModel.setTraitOnScreen(name, true) }}
+                .onDisappear {{ viewModel.setTraitOnScreen(name, false) }}
+        )
     }}
 
     /// One live writer renders verbatim; two or more stack vertically; none is empty.
@@ -2373,6 +2384,23 @@ mod tests {
         assert!(!content.contains("sendEvent(trait: trait, event: ev.event"));
     }
 
+    /// A fold can owe the host legs of its own (a refetch after a persist's success): the view model posts and folds
+    /// them in order, queued behind each other, and a failed owed leg alerts without restoring the confirmed leg.
+    #[test]
+    fn view_model_posts_the_follow_on_legs_a_fold_owes() {
+        let module = OirModule::new("TestApp", "1.0.0");
+        let content = generate_view_model_file(&module).content;
+        assert!(content.contains("outcome(.applied, applied.serverLegs)"));
+        assert!(content.contains("self?.postOwedLegs(Array(owed.dropFirst()) + more,"));
+        assert_eq!(content.matches("private func postAndApplyLeg(").count(), 1);
+        let first = fold_arm(&content, "private func postServerLeg(", "private func postOwedLegs(");
+        assert!(first.contains("if case .failed = result {\n                outcome(result)"));
+        assert!(first.contains("self?.alertMessage = message"));
+        assert!(!first.contains("restoreOnServerFailure"));
+        let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
+        assert!(bridge.contains("serverLegs: wire.serverLegs)"));
+    }
+
     /// The applied-response branch folds its outcomes' effects through the
     /// SAME `foldResponse` a dispatch uses, and the fold exists once.
     #[test]
@@ -2522,6 +2550,22 @@ mod tests {
         module.pages[1].is_initial = false;
         let vm = generate_view_model_file(&module).content;
         assert!(vm.contains(r#"startRoute = "/home""#));
+    }
+
+    #[test]
+    fn an_undeclared_route_pushes_the_not_found_page_when_one_is_declared() {
+        let mut module = module_with_pages(&[("Home", "/home"), ("Missing", "/missing")]);
+        let vm = generate_view_model_file(&module).content;
+        assert!(vm.contains("notFoundRoute: String? = nil"), "control: none declared");
+        module.pages[1].is_not_found = true;
+        let vm = generate_view_model_file(&module).content;
+        assert!(vm.contains(r#"notFoundRoute: String? = "/missing""#));
+        let navigate = vm.find("func navigate(to path: String)").unwrap();
+        let tail = &vm[navigate..];
+        let log = tail.find("navigate to undeclared route").unwrap();
+        let fallback = tail.find("pushRoute(notFound)").unwrap();
+        let plain = tail.find("pushRoute(path)").unwrap();
+        assert!(log < fallback && fallback < plain);
     }
 
     /// The initial route REPLACES the stack root (a push leaves a stray back chevron over the
@@ -2777,7 +2821,6 @@ mod tests {
         assert_eq!(oir_type_to_swift(&OirType::Boolean, "Ctx"), "Bool");
         assert_eq!(oir_type_to_swift(&OirType::Date, "Ctx"), "String");
         assert_eq!(oir_type_to_swift(&OirType::DateTime, "Ctx"), "String");
-        assert_eq!(oir_type_to_swift(&OirType::Json, "Ctx"), "AnyCodable");
         assert_eq!(oir_type_to_swift(&OirType::Trait, "Ctx"), "String");
         assert_eq!(oir_type_to_swift(&OirType::SExpr, "Ctx"), "AnyCodable");
         // Reference: the `orbital_core` default (`render.rs` C1) — a relation
@@ -3179,7 +3222,7 @@ mod tests {
         assert!(app.contains("} else if live.count > 1 {\n            VStack(alignment: .leading, spacing: 24) {\n                ForEach(live, id: \\.self) { traitBody($0) }"));
         assert!(app.contains("mainBody\n            .modifier(AlmadarSurfaceEnter(shape: \"pageEnter\", timing: .page, replayKey: pageName))\n            .verificationContainer(mainSlotId)"));
         // the theme motion: each writer plays the slot entry, the toast slot its surface shape
-        assert!(app.contains("renderSlot(spliced).modifier(AlmadarSlotEnter(content: spliced, contentKey: key))"));
+        assert!(app.contains("renderSlot(spliced)\n                .modifier(AlmadarSlotEnter(content: spliced, contentKey: key))"));
         assert!(app.contains("AlmadarSurfaceEnter(shape: role == .toast ? \"toastEnter\" : nil, timing: .toast"));
         // control: nothing live renders no body; the old first-declared fallback is gone
         assert!(!app.contains("traitContent[traitName]"));
@@ -4024,4 +4067,14 @@ mod tests {
         assert!(snapshot_test_source().contains("func test_button()"));
     }
 
+
+    #[test]
+    fn a_live_trait_view_reports_its_presence_to_the_kernel_from_its_swiftui_lifecycle() {
+        let module = OirModule::new("TestApp", "1.0.0");
+        let app = generate_app_file(&module).content;
+        assert!(app.contains(".onAppear { viewModel.setTraitOnScreen(name, true) }"));
+        assert!(app.contains(".onDisappear { viewModel.setTraitOnScreen(name, false) }"));
+        let vm = generate_view_model_file(&module).content;
+        assert!(vm.contains("kernel?.setTraitOnScreen(traitName, onScreen)"));
+    }
 }

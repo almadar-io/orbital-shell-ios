@@ -61,6 +61,9 @@ func orbital_kernel_abandon_server_leg(
     _ error: UnsafePointer<CChar>?
 )
 
+@_silgen_name("orbital_kernel_frames_since")
+func orbital_kernel_frames_since(_ handle: OrbitalKernelHandleRef?, _ since: UInt64) -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("orbital_kernel_tick")
 func orbital_kernel_tick(
     _ handle: OrbitalKernelHandleRef?,
@@ -104,6 +107,13 @@ func orbital_kernel_resolve_rows(
 func orbital_kernel_set_theme_mode(
     _ handle: OrbitalKernelHandleRef?,
     _ mode: UnsafePointer<CChar>?
+)
+
+@_silgen_name("orbital_kernel_set_trait_on_screen")
+func orbital_kernel_set_trait_on_screen(
+    _ handle: OrbitalKernelHandleRef?,
+    _ traitName: UnsafePointer<CChar>?,
+    _ onScreen: Bool
 )
 
 @_silgen_name("orbital_kernel_set_current_user")
@@ -186,6 +196,65 @@ struct KernelEmittedEvent: Codable {
     let source: KernelEventSource?
 }
 
+/// Mirror of `orbital_core::FrameDelta` (EXEC-DIST-7): what a response changes in the frames its client holds, against
+/// the kernel's view record. Each op is `["put", frame, {fields}]`, `["set", {frame: {fields}}]`, `["del", frame]` or
+/// `["clear"]`. A delta without `session` is unversioned and applies wherever it lands.
+struct KernelFrameDelta: Codable {
+    let session: String?
+    let from: UInt64
+    let to: UInt64
+    let ops: [AnyCodable]
+
+    /// A snapshot starts from nothing: `from` 0 and a leading `clear`.
+    var isSnapshot: Bool {
+        from == 0 && ops.first?.arrayValue?.first?.stringValue == "clear"
+    }
+}
+
+/// The version of a kernel's frame record this view has painted, and the frames it holds. The kernel owns the
+/// reconciliation; this only applies ops at the version they start from.
+struct KernelFrameView {
+    enum Outcome { case applied, stale, gap }
+
+    var session: String?
+    var version: UInt64 = 0
+    var frames: [String: AnyCodable] = [:]
+
+    mutating func apply(_ delta: KernelFrameDelta) -> Outcome {
+        if let deltaSession = delta.session {
+            if !delta.isSnapshot {
+                let current = deltaSession == session && delta.from == version
+                if deltaSession == session && delta.to <= version && !current { return .stale }
+                if !current { return .gap }
+            }
+            session = deltaSession
+            version = delta.to
+        }
+        for op in delta.ops {
+            guard let parts = op.arrayValue, let name = parts.first?.stringValue else { continue }
+            switch name {
+            case "clear":
+                frames.removeAll()
+            case "del":
+                if parts.count > 1, let frame = parts[1].stringValue { frames.removeValue(forKey: frame) }
+            case "put":
+                if parts.count > 2, let frame = parts[1].stringValue, let fields = parts[2].dictValue { frames[frame] = .dict(fields) }
+            case "set":
+                guard parts.count > 1, let sets = parts[1].dictValue else { continue }
+                for (frame, written) in sets {
+                    guard let writtenFields = written.dictValue else { continue }
+                    var row = frames[frame]?.dictValue ?? [:]
+                    row.merge(writtenFields) { _, new in new }
+                    frames[frame] = .dict(row)
+                }
+            default:
+                continue
+            }
+        }
+        return .applied
+    }
+}
+
 /// Mirror of `orbital_core::EventResponse` — NOT the same type as this
 /// project's generated `EventResponse` (ApiClient.swift), which carries the
 /// old per-shell wire shape.
@@ -195,7 +264,7 @@ struct KernelEventResponse: Codable {
     let states: [String: String]
     let emittedEvents: [KernelEmittedEvent]
     let data: [String: [AnyCodable]]?
-    let entityByTrait: [String: AnyCodable]?
+    let frames: KernelFrameDelta?
     let clientEffectsByTrait: [AnyCodable]?
     let effectResults: [AnyCodable]?
     let guardFailed: String?
@@ -224,6 +293,8 @@ struct KernelServerLeg: Codable {
     let behavior: String?
     let delivery: AnyCodable?
     let dispatchLog: AnyCodable?
+    /// Not a dispatch: the client holds this version of the session's frames and asks what it misses.
+    let framesSince: UInt64?
 }
 
 /// The `(trait, event)` that began a dispatch; a leg failure is reported against its event.
@@ -366,16 +437,27 @@ struct KernelRowPage: Decodable {
     let total: Int
 }
 
+struct KernelFramesResync: Codable {
+    let session: String
+    let since: UInt64
+}
+
 /// `orbital_kernel_apply_server_response`'s decoded envelope. A `{"error":
 /// ...}` response (no `applied` key) fails this decode — `applyServerResponse`
 /// returns `nil` and the caller reads `lastError`, same contract as `dispatch`.
 struct KernelAppliedResult {
     let applied: [KernelTraitEventPair]
     let response: KernelEventResponse
+    /// Set when the host numbered frames past the version this kernel holds: ask for `framesSince(since)`.
+    let resync: KernelFramesResync?
+    /// The legs the fold itself owes the host (an own continuation such as a refetch after a persist's success), to post and fold in turn.
+    let serverLegs: [KernelRoutedLeg]
 
     fileprivate struct Wire: Codable {
         let applied: [[String]]
         let response: KernelEventResponse
+        let resync: KernelFramesResync?
+        let serverLegs: [KernelRoutedLeg]
     }
 }
 
@@ -447,6 +529,12 @@ final class OrbitalKernel {
         )
     }
 
+    /// The frame delta a painter at version `since` of this kernel's frames needs: empty when current, else a snapshot.
+    func framesSince(_ since: UInt64) -> KernelFrameDelta? {
+        guard let data = consume(orbital_kernel_frames_since(handle, since)) else { return nil }
+        return try? JSONDecoder().decode(KernelFrameDelta.self, from: data)
+    }
+
     func applyServerResponse(responseJSON: String, alreadyDelivered: [KernelTraitEventPair]) -> KernelAppliedResult? {
         let alreadyDeliveredJSON = (try? JSONEncoder().encode(alreadyDelivered.map { [$0.trait, $0.event] }))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
@@ -457,7 +545,7 @@ final class OrbitalKernel {
         }
         guard let data = consume(raw) else { return nil }
         guard let wire = try? JSONDecoder().decode(KernelAppliedResult.Wire.self, from: data) else { return nil }
-        return KernelAppliedResult(applied: decodePairs(wire.applied), response: wire.response)
+        return KernelAppliedResult(applied: decodePairs(wire.applied), response: wire.response, resync: wire.resync, serverLegs: wire.serverLegs)
     }
 
     /// A server leg failed at transport level with no snapshot to restore: lowers the
@@ -592,6 +680,12 @@ final class OrbitalKernel {
     /// `@currentTheme` resolution (`orbital_kernel_set_theme_mode`, C1c).
     func setThemeMode(_ mode: String) {
         mode.withCString { orbital_kernel_set_theme_mode(handle, $0) }
+    }
+
+    /// Reports whether a trait's rendered output is on screen, so its `[visible]` ticks run only then
+    /// (`orbital_kernel_set_trait_on_screen`, EXEC-TICK-4).
+    func setTraitOnScreen(_ traitName: String, _ onScreen: Bool) {
+        traitName.withCString { orbital_kernel_set_trait_on_screen(handle, $0, onScreen) }
     }
 
     func setCurrentUser(json: String) {

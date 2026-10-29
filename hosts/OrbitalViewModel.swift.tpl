@@ -62,6 +62,8 @@ class OrbitalViewModel: ObservableObject {
     @Published var uiSlots: [String: AnyCodable] = [:]
     @Published var entityData: [String: [AnyCodable]] = [:]
     @Published var fields: [String: AnyCodable] = [:]
+    /// The kernel's frames as last painted, with the version they are at (EXEC-DIST-7); `fields` mirrors them by frame key.
+    private var frameView = KernelFrameView()
     @Published var navigationPath: NavigationPath = NavigationPath() {
         didSet { syncRoute() }
     }
@@ -111,6 +113,7 @@ class OrbitalViewModel: ObservableObject {
     /// Traits embedded via `@trait.X` by a sibling: indexed in `traitContent` for the splice, never a `main` owner.
     static let embeddedTraits: Set<String> = __EMBEDDED_TRAITS__
     private static let startRoute = "__START_ROUTE__"
+    private static let notFoundRoute: String? = __NOT_FOUND_ROUTE__
     /// The host's own sign-in route (`HOST_SIGN_IN_ROUTE`): no page declares it, `GeneratedApp` renders `OrbitalSignInView`.
     static let hostSignInRoute = "__HOST_SIGN_IN_ROUTE__"
     /// The event name a renderer emits for a `navigatesTo` action or a nav item; the page routes it
@@ -313,6 +316,11 @@ class OrbitalViewModel: ObservableObject {
         if active { Task { try? await auth.refreshIfNeeded() } }
     }
 
+    /// The view lifecycle's report that a trait's rendered output entered or left the screen (`[visible]` ticks, EXEC-TICK-4).
+    func setTraitOnScreen(_ traitName: String, _ onScreen: Bool) {
+        kernel?.setTraitOnScreen(traitName, onScreen)
+    }
+
     private func applyForeground() {
         guard let kernel = kernel, let frameLoop = frameLoop else { return }
         if isForeground {
@@ -373,6 +381,10 @@ class OrbitalViewModel: ObservableObject {
     func navigate(to path: String) {
         if !OrbitalViewModel.knownRoutes.contains(path) && path != OrbitalViewModel.hostSignInRoute {
             OrbitalViewModel.eventLog.error("navigate to undeclared route \(path, privacy: .public)")
+            if let notFound = OrbitalViewModel.notFoundRoute {
+                pushRoute(notFound)
+                return
+            }
         }
         pushRoute(path)
     }
@@ -475,13 +487,11 @@ class OrbitalViewModel: ObservableObject {
         if let data = response.data {
             entityData.merge(data) { _, new in new }
         }
-        if let entityByTrait = response.entityByTrait {
-            for (trait, written) in entityByTrait {
-                guard let writtenFields = written.dictValue else { continue }
-                var row = fields[trait]?.dictValue ?? [:]
-                row.merge(writtenFields) { _, new in new }
-                fields[trait] = .dict(row)
+        if let delta = response.frames {
+            if frameView.apply(delta) == .gap, let snapshot = kernel?.framesSince(frameView.version) {
+                _ = frameView.apply(snapshot)
             }
+            fields = frameView.frames
         }
         for entry in response.clientEffectsByTrait ?? [] {
             guard let dict = entry.dictValue, let trait = dict["traitName"]?.stringValue, let effect = dict["effect"] else { continue }
@@ -592,9 +602,14 @@ class OrbitalViewModel: ObservableObject {
 
     /// POSTs `leg` and, on a successful response, folds it into the kernel
     /// (`applyServerResponse`) — the fold lands server-assigned data (ids,
-    /// `entityByTrait`) for the NEXT render, it does not replace what the
-    /// local response already presented THIS call. `outcome` reports back so
-    /// each mode in `fold` decides its own rollback/alert policy.
+    /// frame deltas) for the NEXT render, it does not replace what the
+    /// local response already presented THIS call. Each leg the fold itself
+    /// owes the host (an own continuation such as a refetch after a persist's
+    /// success) is then posted and folded in turn, in order, until none is
+    /// owed (EXEC-DIST-10), exactly as the native `ClientKernel` does; a failed
+    /// owed leg alerts and never rolls back the confirmed leg that owed it.
+    /// `outcome` reports back so each mode in `fold` decides its own
+    /// rollback/alert policy.
     private func postServerLeg(
         _ leg: KernelServerLeg,
         requestTrait: String,
@@ -602,13 +617,50 @@ class OrbitalViewModel: ObservableObject {
         alreadyDelivered: [KernelTraitEventPair],
         outcome: @escaping (ServerLegOutcome) -> Void
     ) {
+        postAndApplyLeg(leg, requestTrait: requestTrait, orbital: orbital, alreadyDelivered: alreadyDelivered) { [weak self] result, owed in
+            if case .failed = result {
+                outcome(result)
+                return
+            }
+            self?.postOwedLegs(owed, requestTrait: requestTrait) { [weak self] owedResult in
+                if case .failed(let message) = owedResult {
+                    OrbitalViewModel.eventLog.error("a leg owed by the fold of \(requestTrait, privacy: .public) failed: \(message, privacy: .public)")
+                    self?.alertMessage = message
+                }
+                outcome(.applied)
+            }
+        }
+    }
+
+    /// Posts the legs a fold owes the host, first to last; a leg's own fold appends the legs it owes behind them.
+    private func postOwedLegs(_ owed: [KernelRoutedLeg], requestTrait: String, outcome: @escaping (ServerLegOutcome) -> Void) {
+        guard let next = owed.first else {
+            outcome(.applied)
+            return
+        }
+        postAndApplyLeg(next.leg, requestTrait: requestTrait, orbital: next.orbital, alreadyDelivered: []) { [weak self] result, more in
+            if case .failed = result {
+                outcome(result)
+                return
+            }
+            self?.postOwedLegs(Array(owed.dropFirst()) + more, requestTrait: requestTrait, outcome: outcome)
+        }
+    }
+
+    private func postAndApplyLeg(
+        _ leg: KernelServerLeg,
+        requestTrait: String,
+        orbital: String,
+        alreadyDelivered: [KernelTraitEventPair],
+        outcome: @escaping (ServerLegOutcome, [KernelRoutedLeg]) -> Void
+    ) {
         api.postServerLeg(leg, orbital: orbital, requestTrait: requestTrait) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self, let kernel = self.kernel else { return }
                 switch result {
                 case .success(let posted) where posted.response.success:
                     guard let applied = kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: alreadyDelivered) else {
-                        outcome(.failed(kernel.lastError.isEmpty ? "apply_server_response failed" : kernel.lastError))
+                        outcome(.failed(kernel.lastError.isEmpty ? "apply_server_response failed" : kernel.lastError), [])
                         return
                     }
                     // `KernelTraitEventPair.event` carries the NEW STATE here
@@ -617,13 +669,28 @@ class OrbitalViewModel: ObservableObject {
                         self.states[pair.trait] = pair.event
                     }
                     self.foldResponse(applied.response)
+                    if let resync = applied.resync {
+                        self.resyncFrames(resync, orbital: orbital, requestTrait: requestTrait, clientId: leg.clientId)
+                    }
                     OrbitalViewModel.eventLog.info("applied server response for \(requestTrait, privacy: .public): \(applied.applied.map { $0.trait }.joined(separator: ","), privacy: .public)")
-                    outcome(.applied)
+                    outcome(.applied, applied.serverLegs)
                 case .success(let posted):
-                    outcome(.failed(posted.response.error ?? posted.response.guardFailed ?? "Event failed"))
+                    outcome(.failed(posted.response.error ?? posted.response.guardFailed ?? "Event failed"), [])
                 case .failure(let error):
-                    outcome(.failed(error.localizedDescription))
+                    outcome(.failed(error.localizedDescription), [])
                 }
+            }
+        }
+    }
+
+    /// The host numbered frames past the version the kernel holds: post `framesSince` and fold the snapshot it answers.
+    private func resyncFrames(_ resync: KernelFramesResync, orbital: String, requestTrait: String, clientId: String?) {
+        let ask = KernelServerLeg(event: "$FRAMES", eventId: nil, payload: nil, entityId: nil, targetTrait: requestTrait, user: nil, clientId: clientId, tick: nil, sourceTrait: nil, traits: nil, entityByTrait: nil, behavior: nil, delivery: nil, dispatchLog: nil, framesSince: resync.since)
+        api.postServerLeg(ask, orbital: orbital, requestTrait: requestTrait) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self, let kernel = self.kernel, case .success(let posted) = result, posted.response.success,
+                      let applied = kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: []) else { return }
+                self.foldResponse(applied.response)
             }
         }
     }
