@@ -3619,6 +3619,17 @@ mod tests {
         assert!(ret.contains("sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion[\"entity\"]?.stringValue)"));
     }
 
+    /// `auth/consent` is answered by name on iOS: no web authentication session is wired, so it fails `unavailable` on its failure route.
+    #[test]
+    fn consent_is_a_host_ask_this_host_answers_unavailable_by_name() {
+        let vm = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
+        let body = &vm[vm.find("func answerHostAsk(").unwrap()..];
+        let consent = body.find("case \"auth/consent\":").expect("auth/consent has its own case");
+        let refuse = body.find("refused: this host has no action for it").unwrap();
+        assert!(consent < refuse);
+        assert!(body[consent..refuse].contains("returnHostAsk(completion, error: \"auth/consent: this host has no web authentication session\", kind: \"unavailable\")"));
+    }
+
     #[test]
     fn page_still_sends_every_other_event_to_the_kernel() {
         let page = generate_app_file(&OirModule::new("TestApp", "1.0.0")).content;

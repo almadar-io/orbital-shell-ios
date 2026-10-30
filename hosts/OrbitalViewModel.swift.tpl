@@ -165,6 +165,9 @@ class OrbitalViewModel: ObservableObject {
             signOut()
         case "auth/sign-in":
             Task { @MainActor [weak self] in await self?.answerSignIn(args: args, completion: completion) }
+        case "auth/consent":
+            OrbitalViewModel.eventLog.error("host-ask auth/consent refused: this host has no web authentication session")
+            returnHostAsk(completion, error: "auth/consent: this host has no web authentication session", kind: "unavailable")
         default:
             OrbitalViewModel.eventLog.error("host-ask \(op, privacy: .public) refused: this host has no action for it")
             returnHostAsk(completion, error: "\(op): this host has no action for it", kind: "unavailable")
