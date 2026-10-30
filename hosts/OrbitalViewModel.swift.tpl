@@ -113,8 +113,6 @@ class OrbitalViewModel: ObservableObject {
     /// The event name a renderer emits for a `navigatesTo` action or a nav item; the page routes it
     /// to `navigate(to:)` before kernel dispatch, as the web router hears the unscoped `UI:NAVIGATE`.
     static let navigateEvent = "NAVIGATE"
-    /// The system event `UI:SIGN_OUT`: the host ends the session, the kernel never sees it.
-    static let signOutEvent = "SIGN_OUT"
     private var routeStack: [String] = []
     private static let eventLog = Logger(subsystem: "com.orbital", category: "dispatch")
 
@@ -152,6 +150,73 @@ class OrbitalViewModel: ObservableObject {
 
     func signOut() {
         auth.signOut()
+    }
+
+    /// Answers one `host-ask` client effect (`ClientEffect::HostAsk`): `auth/sign-out` ends the session and
+    /// `auth/sign-in` signs in by email or custom token and returns its answer to `completion`; an ask this host has
+    /// no action for, or one with arguments it does not take, is refused by name (and fails the ask's failure route).
+    func answerHostAsk(op: String, args: [AnyCodable], completion: AnyCodable? = nil) {
+        switch op {
+        case "auth/sign-out":
+            guard args.isEmpty else {
+                OrbitalViewModel.eventLog.error("host-ask auth/sign-out refused: it takes no arguments")
+                return
+            }
+            signOut()
+        case "auth/sign-in":
+            Task { @MainActor [weak self] in await self?.answerSignIn(args: args, completion: completion) }
+        default:
+            OrbitalViewModel.eventLog.error("host-ask \(op, privacy: .public) refused: this host has no action for it")
+            returnHostAsk(completion, error: "\(op): this host has no action for it", kind: "unavailable")
+        }
+    }
+
+    private func answerSignIn(args: [AnyCodable], completion: AnyCodable?) async {
+        guard args.count == 1, let request = args[0].dictValue, let method = request["method"]?.stringValue else {
+            returnHostAsk(completion, error: "auth/sign-in takes one request object with a method", kind: "invalid")
+            return
+        }
+        do {
+            switch method {
+            case "email":
+                guard request.count == 3, let email = request["email"]?.stringValue, !email.isEmpty, let password = request["password"]?.stringValue, !password.isEmpty else {
+                    returnHostAsk(completion, error: "auth/sign-in: email takes an email and a password", kind: "invalid")
+                    return
+                }
+                try await auth.signIn(email: email, password: password)
+            case "customToken":
+                guard request.count == 2, let token = request["token"]?.stringValue, !token.isEmpty else {
+                    returnHostAsk(completion, error: "auth/sign-in: customToken takes a token", kind: "invalid")
+                    return
+                }
+                try await auth.signIn(customToken: token)
+            case "google", "emailLink":
+                returnHostAsk(completion, error: "auth/sign-in: this host has no \(method) sign-in", kind: "unavailable")
+                return
+            default:
+                returnHostAsk(completion, error: "auth/sign-in: method must be google, email, emailLink or customToken", kind: "invalid")
+                return
+            }
+            guard let uid = auth.session?.uid else {
+                returnHostAsk(completion, error: "auth/sign-in: the provider returned no session", kind: "unavailable")
+                return
+            }
+            returnHostAsk(completion, ok: ["uid": .string(uid)])
+        } catch OrbitalAuthError.provider(let message) {
+            returnHostAsk(completion, error: message, kind: "denied")
+        } catch {
+            returnHostAsk(completion, error: error.localizedDescription, kind: "unavailable")
+        }
+    }
+
+    /// Returns a host ask's answer: dispatches the event of the outcome it reached to the asking trait, with the call's
+    /// key. An ask that declared no route for the outcome fires nothing.
+    private func returnHostAsk(_ completion: AnyCodable?, ok: [String: AnyCodable]? = nil, error: String = "", kind: String = "") {
+        guard let completion = completion?.dictValue, let trait = completion["trait"]?.stringValue else { return }
+        guard let event = (ok != nil ? completion["success"] : completion["failure"])?.stringValue else { return }
+        var payload: [String: AnyCodable] = ok ?? ["error": .string(error), "kind": .string(kind)]
+        if let key = completion["key"]?.stringValue { payload["key"] = .string(key) }
+        sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion["entity"]?.stringValue)
     }
 
     private func apply(resolvedTheme: KernelResolvedTheme?) {
@@ -441,18 +506,18 @@ class OrbitalViewModel: ObservableObject {
     /// route through here (mirrors `ClientKernel::dispatch`). A call before
     /// the kernel is ready is dropped and logged; nothing can fire before
     /// `start()` mounts it.
-    func sendEvent(trait: String, event: String, payload: AnyCodable? = nil) {
+    func sendEvent(trait: String, event: String, payload: AnyCodable? = nil, entityId: String? = nil) {
         guard let kernel = kernel else {
             OrbitalViewModel.eventLog.error("dispatch \(trait, privacy: .public) \(event, privacy: .public) dropped: kernel not ready")
             return
         }
         let payloadJSON = payload.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) }
-        guard let result = kernel.dispatch(trait: trait, entityId: nil, event: event, payloadJSON: payloadJSON) else {
+        guard let result = kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON) else {
             alertMessage = kernel.lastError.isEmpty ? "Event failed" : kernel.lastError
             return
         }
         OrbitalViewModel.eventLog.info("dispatch \(trait, privacy: .public) \(event, privacy: .public) mode=\(result.mode.rawValue, privacy: .public) states=\(result.response.states.keys.joined(separator: ","), privacy: .public) serverLegs=\(result.serverLegs.count, privacy: .public)")
-        fold(result: result, requestTrait: trait, entityId: nil)
+        fold(result: result, requestTrait: trait, entityId: entityId)
     }
 
     /// The one fold of a kernel `EventResponse` into view-model state: a

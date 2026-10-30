@@ -53,6 +53,11 @@ class EffectHandlers {
             if viewModel?.navigationPath.isEmpty == false {
                 viewModel?.navigationPath.removeLast()
             }
+        case "host-ask":
+            // A `runsOn: client` host-port effect (`auth/sign-out`, `auth/sign-in`); the view model answers it or refuses it by name,
+            // and returns the answer of one that declared routes to its fourth element's trait.
+            guard let op = arr[safe: 1]?.stringValue else { return }
+            viewModel?.answerHostAsk(op: op, args: arr[safe: 2]?.arrayValue ?? [], completion: arr[safe: 3])
         case "notify":
             let title = arr[safe: 1]?.stringValue ?? ""
             let message = arr[safe: 2]?.stringValue ?? ""

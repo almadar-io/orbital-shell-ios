@@ -1190,10 +1190,6 @@ struct GeneratedPage: View {{
             viewModel.navigate(envelope: payload)
             return
         }}
-        if event == OrbitalViewModel.signOutEvent {{
-            viewModel.signOut()
-            return
-        }}
         let source = payload?.dictValue?["sourceTrait"]?.stringValue ?? traitName
         let sendPayload = payload?.dictValue?["actionPayload"]
         viewModel.sendEvent(trait: source, event: event, payload: sendPayload)
@@ -3589,19 +3585,38 @@ mod tests {
         assert!(on_event[nav..dispatch].contains("return"));
     }
 
-    /// The system event `UI:SIGN_OUT` (`@almadar/core` `SYSTEM_UI_EVENTS`) ends the session in the
-    /// host and never reaches the kernel (G-PATTERN-SYNC-031).
+    /// `auth/sign-out` is a `host-ask` client effect the view model answers (G-ORB-589); the page no longer
+    /// intercepts a `SIGN_OUT` event name, so it reaches the kernel like every other event.
     #[test]
-    fn page_routes_sign_out_to_the_session_before_kernel_dispatch() {
+    fn sign_out_is_a_host_ask_the_view_model_answers_not_an_event_the_page_intercepts() {
         let page = generate_app_file(&OirModule::new("TestApp", "1.0.0")).content;
         let on_event = fold_arm(&page, "private func onEvent(", "private func renderSlot(");
-        let branch = on_event.find("if event == OrbitalViewModel.signOutEvent").expect("sign-out branch");
-        let session = on_event.find("viewModel.signOut()").unwrap();
-        let dispatch = on_event.find("viewModel.sendEvent(").unwrap();
-        assert!(branch < session && session < dispatch);
-        assert!(on_event[branch..dispatch].contains("return"));
+        assert!(!on_event.contains("signOut"), "{on_event}");
         let vm = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
-        assert!(vm.contains("static let signOutEvent = \"SIGN_OUT\""));
+        assert!(!vm.contains("signOutEvent"));
+        let answer = vm.find("func answerHostAsk(op: String, args: [AnyCodable], completion: AnyCodable? = nil)").expect("the view model answers host asks");
+        let body = &vm[answer..];
+        let sign_out = body.find("case \"auth/sign-out\":").unwrap();
+        let sign_in = body.find("case \"auth/sign-in\":").unwrap();
+        let refuse = body.find("refused: this host has no action for it").unwrap();
+        assert!(sign_out < sign_in && sign_in < refuse, "an unknown op is refused after the ops this host answers");
+        let effects = generate_effect_handlers_file().content;
+        assert!(effects.contains("case \"host-ask\":") && effects.contains("viewModel?.answerHostAsk(op: op, args: arr[safe: 2]?.arrayValue ?? [], completion: arr[safe: 3])"));
+    }
+
+    /// `auth/sign-in` returns its answer to the asking trait on the route it declared (EXEC-DIST-13): a success carries
+    /// the viewer and the key, a failure `{ error, kind, key }`, and a method this host cannot run fails `unavailable`.
+    #[test]
+    fn sign_in_is_a_host_ask_whose_answer_returns_to_the_asking_trait_on_its_declared_route() {
+        let vm = generate_view_model_file(&OirModule::new("TestApp", "1.0.0")).content;
+        let at = vm.find("private func answerSignIn(").expect("the view model answers auth/sign-in");
+        let body = &vm[at..];
+        assert!(body.contains("try await auth.signIn(email: email, password: password)") && body.contains("try await auth.signIn(customToken: token)"));
+        assert!(body.contains("case \"google\", \"emailLink\":") && body.contains("kind: \"unavailable\""));
+        let ret = &vm[vm.find("private func returnHostAsk(").unwrap()..];
+        assert!(ret.contains("(ok != nil ? completion[\"success\"] : completion[\"failure\"])?.stringValue else { return }"), "an undeclared route fires nothing");
+        assert!(ret.contains("payload[\"key\"] = .string(key)"));
+        assert!(ret.contains("sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion[\"entity\"]?.stringValue)"));
     }
 
     #[test]
