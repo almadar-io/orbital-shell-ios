@@ -2195,7 +2195,7 @@ mod tests {
         assert!(content.contains("private var kernel: OrbitalKernel?"));
         assert!(content.contains("OrbitalKernel(resolvedSchemaJSON: $0, clientId: clientId)"));
         assert!(content.contains(
-            "kernel.dispatch(trait: trait, entityId: nil, event: event, payloadJSON: payloadJSON)"
+            "kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON)"
         ));
     }
 
