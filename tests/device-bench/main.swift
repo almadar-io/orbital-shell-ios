@@ -91,7 +91,7 @@ func runFrames(_ id: String, _ spec: [String: Any], sustained: Bool) throws -> [
         let result = take(orbital_kernel_frame(handle, virtualMs))
         let spent = nowMs() - start
         if i == 1, let result = result, let wire = try? JSONSerialization.jsonObject(with: Data(result.utf8)) as? [String: Any] {
-            fired = (wire["fired"] as? [Any])?.count ?? 0
+            fired = (wire["fired"] as? [String: [Any]])?.values.reduce(0) { $0 + $1.count } ?? 0
         }
         kernelMs.append(spent)
         if spent > frameBudgetMs { dropped += 1 }

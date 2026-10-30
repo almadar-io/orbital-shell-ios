@@ -216,7 +216,7 @@ class OrbitalViewModel: ObservableObject {
         guard let event = (ok != nil ? completion["success"] : completion["failure"])?.stringValue else { return }
         var payload: [String: AnyCodable] = ok ?? ["error": .string(error), "kind": .string(kind)]
         if let key = completion["key"]?.stringValue { payload["key"] = .string(key) }
-        sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion["entity"]?.stringValue)
+        sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion["entityId"]?.stringValue)
     }
 
     private func apply(resolvedTheme: KernelResolvedTheme?) {

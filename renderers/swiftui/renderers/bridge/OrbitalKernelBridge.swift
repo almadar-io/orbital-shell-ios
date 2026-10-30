@@ -364,7 +364,8 @@ struct KernelFrameDispatch {
 
 /// `orbital_kernel_frame`'s decoded envelope: the merged tick response plus one dispatch per tick `emit`.
 struct KernelFrameResult {
-    let fired: [KernelFiredTick]
+    /// The ticks that ran, under the orbital that declares each.
+    let fired: [String: [KernelFiredTick]]
     let response: KernelEventResponse
     let dispatches: [KernelFrameDispatch]
     /// Server effects a tick delegated: a tick has no server leg, so they are discarded.
@@ -372,7 +373,7 @@ struct KernelFrameResult {
     let errors: [String]
 
     fileprivate struct Wire: Decodable {
-        let fired: [KernelFiredTick]
+        let fired: [String: [KernelFiredTick]]
         let response: KernelEventResponse
         let dispatches: [KernelFrameDispatch.Wire]
         let droppedServerEffects: Int
