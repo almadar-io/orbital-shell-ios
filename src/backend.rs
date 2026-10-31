@@ -3183,7 +3183,6 @@ mod tests {
         assert!(content.contains("sessionBinding.apply(next)"));
         assert!(content.contains("store: KeychainSessionStore("));
         assert!(content.contains("extension OrbitalAPI: BearerSink {}"));
-        assert!(content.contains("extension OrbitalKernel: ViewerSink {}"));
         assert!(content.contains(r#"static let hostSignInRoute = "/login""#));
     }
 

@@ -209,22 +209,6 @@ final class OrbitalAuthTests: XCTestCase {
         XCTAssertNil(empty.session)
     }
 
-    func test_viewer_normalizes_claims_like_the_web_client() throws {
-        let token = jwt("{\"sub\":\"u1\",\"name\":\"Maya\",\"email\":\"m@x.io\",\"role\":\"admin\",\"user_id\":\"u1\"}")
-        let json = try XCTUnwrap(OrbitalAuth.viewerJSON(idToken: token))
-        let user = try XCTUnwrap(try JSONDecoder().decode(AnyCodable.self, from: Data(json.utf8)).dictValue)
-        XCTAssertEqual(user["id"]?.stringValue, "u1")
-        XCTAssertEqual(user["uid"]?.stringValue, "u1")
-        XCTAssertEqual(user["name"]?.stringValue, "Maya")
-        XCTAssertEqual(user["email"]?.stringValue, "m@x.io")
-        XCTAssertEqual(user["role"]?.stringValue, "admin")
-    }
-
-    func test_viewer_is_nil_without_a_subject_and_a_malformed_token_throws() throws {
-        XCTAssertNil(try OrbitalAuth.viewerJSON(idToken: jwt("{\"role\":\"admin\"}")))
-        XCTAssertThrowsError(try OrbitalAuth.viewerJSON(idToken: "not-a-jwt"))
-    }
-
     func test_config_needs_key_and_project_and_the_debug_override_wins() {
         let info: [String: AnyCodable] = ["OrbitalFirebaseApiKey": .string("k"), "OrbitalFirebaseProjectId": .string("p"), "OrbitalAuthEmulatorHost": .string("plist:9099")]
         XCTAssertEqual(OrbitalAuthConfig.declared(info: info, emulatorOverride: "env:9099")?.emulatorHost, "env:9099")
@@ -240,50 +224,31 @@ final class RecordingApi: BearerSink {
     func setAuthToken(_ token: String?) { tokens.append(token) }
 }
 
-final class RecordingKernel: ViewerSink {
-    var users: [String] = []
-    func setCurrentUser(json: String) { users.append(json) }
-}
-
 final class OrbitalSessionBindingTests: XCTestCase {
     private func session(_ uid: String, token: String? = nil) -> OrbitalAuthSession {
         OrbitalAuthSession(idToken: token ?? jwt("{\"sub\":\"\(uid)\",\"role\":\"admin\"}"), refreshToken: "r", expiresAt: Date(timeIntervalSince1970: 2_000_000), uid: uid)
     }
 
-    func test_a_session_attaches_its_token_and_binds_the_viewer_on_the_kernel() throws {
+    func test_a_session_attaches_its_token_and_sign_out_clears_it() {
         let api = RecordingApi()
-        let kernel = RecordingKernel()
-        let binding = OrbitalSessionBinding(api: api, kernel: { kernel })
+        let binding = OrbitalSessionBinding(api: api)
         let signedIn = session("u1")
 
         XCTAssertTrue(binding.apply(signedIn))
-
         XCTAssertEqual(api.tokens, [signedIn.idToken])
-        let user = try XCTUnwrap(JSONDecoder().decode(AnyCodable.self, from: Data(try XCTUnwrap(kernel.users.first).utf8)).dictValue)
-        XCTAssertEqual(user["id"]?.stringValue, "u1")
-        XCTAssertEqual(user["role"]?.stringValue, "admin")
-    }
-
-    func test_sign_out_clears_the_token_and_the_kernel_viewer() {
-        let api = RecordingApi()
-        let kernel = RecordingKernel()
-        let binding = OrbitalSessionBinding(api: api, kernel: { kernel })
-        binding.apply(session("u1"))
 
         XCTAssertTrue(binding.apply(nil))
-
         XCTAssertEqual(api.tokens.last ?? "unset", nil)
-        XCTAssertEqual(kernel.users.last, "null")
     }
 
     func test_a_refresh_of_the_same_identity_is_not_an_identity_change() {
-        let binding = OrbitalSessionBinding(api: RecordingApi(), kernel: { RecordingKernel() })
+        let binding = OrbitalSessionBinding(api: RecordingApi())
         XCTAssertTrue(binding.apply(session("u1")))
         XCTAssertFalse(binding.apply(session("u1", token: jwt("{\"sub\":\"u1\",\"iat\":2}"))))
         XCTAssertTrue(binding.apply(session("u2")))
     }
 
     func test_signing_out_when_nobody_is_signed_in_changes_nothing() {
-        XCTAssertFalse(OrbitalSessionBinding(api: RecordingApi(), kernel: { nil }).apply(nil))
+        XCTAssertFalse(OrbitalSessionBinding(api: RecordingApi()).apply(nil))
     }
 }

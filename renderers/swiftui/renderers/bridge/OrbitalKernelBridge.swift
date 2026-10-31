@@ -108,12 +108,6 @@ func orbital_kernel_set_trait_on_screen(
     _ onScreen: Bool
 )
 
-@_silgen_name("orbital_kernel_set_current_user")
-func orbital_kernel_set_current_user(
-    _ handle: OrbitalKernelHandleRef?,
-    _ userJson: UnsafePointer<CChar>?
-)
-
 @_silgen_name("orbital_kernel_seed")
 func orbital_kernel_seed(
     _ handle: OrbitalKernelHandleRef?,
@@ -633,10 +627,6 @@ final class OrbitalKernel {
     /// (`orbital_kernel_set_trait_on_screen`, EXEC-TICK-4).
     func setTraitOnScreen(_ traitName: String, _ onScreen: Bool) {
         traitName.withCString { orbital_kernel_set_trait_on_screen(handle, $0, onScreen) }
-    }
-
-    func setCurrentUser(json: String) {
-        json.withCString { orbital_kernel_set_current_user(handle, $0) }
     }
 
     func seed(entityType: String, rowsJSON: String) {

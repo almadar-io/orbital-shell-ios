@@ -3,7 +3,6 @@
 // Usage: bench <workload-dir> [--sustained]
 import Foundation
 
-let viewer = #"{"id":"viewer-1","name":"Dev Viewer","email":"viewer@example.com","role":""}"#
 let frameBudgetMs = 1000.0 / 60.0
 let sustainedSeconds = 300.0
 
@@ -44,7 +43,6 @@ func open(_ spec: [String: Any]) throws -> OpaquePointer {
     guard let handle = orbital_kernel_init(json(spec["schema"] ?? [:]), "bench") else {
         throw NSError(domain: "bench", code: 2, userInfo: [NSLocalizedDescriptionKey: "orbital_kernel_init returned null"])
     }
-    orbital_kernel_set_current_user(handle, viewer)
     return handle
 }
 

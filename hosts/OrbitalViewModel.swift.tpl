@@ -83,7 +83,7 @@ class OrbitalViewModel: ObservableObject {
     private var kernel: OrbitalKernel?
     private let api: OrbitalAPI
     let auth: OrbitalAuth
-    private lazy var sessionBinding = OrbitalSessionBinding(api: api, kernel: { [unowned self] in self.kernel })
+    private lazy var sessionBinding = OrbitalSessionBinding(api: api)
     /// The server the host sign-in lists dev personas from and exchanges their custom token with.
     var apiBase: String { api.baseUrl }
     /// Per-launch id, the live-broadcast origin-exclusion key — mirrors the
@@ -348,9 +348,9 @@ class OrbitalViewModel: ObservableObject {
         }
     }
 
-    /// Binds the session's token and viewer. A different identity re-enters the app under it, as the
-    /// web re-renders under a new `UserProvider` viewer: the live-push channel reconnects signed and
-    /// every trait INITs again. A token refresh of the same identity changes neither.
+    /// Binds the session's token; the server verifies it and binds the identity. A different identity
+    /// re-enters the app under it, as the web does: the live-push channel reconnects signed and every
+    /// trait INITs again. A token refresh of the same identity changes neither.
     private func applySession(_ next: OrbitalAuthSession?, reinit: Bool) {
         session = next
         let identityChanged = sessionBinding.apply(next)
@@ -787,4 +787,3 @@ class OrbitalViewModel: ObservableObject {
 }
 
 extension OrbitalAPI: BearerSink {}
-extension OrbitalKernel: ViewerSink {}

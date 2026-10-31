@@ -259,46 +259,27 @@ final class OrbitalAuth: @unchecked Sendable {
               let claims = payload.dictValue else { throw OrbitalAuthError.malformedResponse("id token payload") }
         return claims
     }
-
-    /// `@user` for the kernel: `normalizeUserContext({...claims, uid: sub})`. `nil` for a token with no subject.
-    nonisolated static func viewerJSON(idToken: String) throws -> String? {
-        var claims = try claims(ofIdToken: idToken)
-        guard let uid = claims["sub"]?.stringValue, !uid.isEmpty else { return nil }
-        claims["uid"] = .string(uid)
-        var user: [String: AnyCodable] = ["id": .string(uid)]
-        for (key, value) in claims where !["id", "name", "displayName", "email"].contains(key) { user[key] = value }
-        if let name = claims["name"]?.stringValue ?? claims["displayName"]?.stringValue, !name.isEmpty { user["name"] = .string(name) }
-        if let email = claims["email"]?.stringValue, !email.isEmpty { user["email"] = .string(email) }
-        return String(data: try JSONEncoder().encode(AnyCodable.dict(user)), encoding: .utf8)
-    }
 }
 
 protocol BearerSink: AnyObject {
     func setAuthToken(_ token: String?)
 }
 
-protocol ViewerSink: AnyObject {
-    func setCurrentUser(json: String)
-}
-
-/// Applies a session to the two places a signed-in viewer shows up: the `Authorization: Bearer`
-/// plumbing every request reads, and the kernel's `@user`. It only reports whether the signed-in
-/// identity changed; what an identity change repaints is the host's call, never inferred here.
+/// Applies a session to the `Authorization: Bearer` plumbing every request reads. The host passes the
+/// credential through as data and never names a viewer; the server verifies it and binds the identity
+/// (EXEC-IDENTITY-4). It only reports whether the signed-in identity changed; what an identity change
+/// repaints is the host's call, never inferred here.
 final class OrbitalSessionBinding {
     private let api: BearerSink
-    private let kernel: () -> ViewerSink?
     private var uid: String?
 
-    init(api: BearerSink, kernel: @escaping () -> ViewerSink?) {
+    init(api: BearerSink) {
         self.api = api
-        self.kernel = kernel
     }
 
     @discardableResult
     func apply(_ session: OrbitalAuthSession?) -> Bool {
         api.setAuthToken(session?.idToken)
-        let viewer = session.flatMap { try? OrbitalAuth.viewerJSON(idToken: $0.idToken) }.flatMap { $0 }
-        kernel()?.setCurrentUser(json: viewer ?? "null")
         let changed = uid != session?.uid
         uid = session?.uid
         return changed
