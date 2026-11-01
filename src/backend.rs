@@ -1778,7 +1778,12 @@ mod tests {
             vm.contains("var slots = uiSlots.mapValues(paintedRowSets)"),
             "so does every overlay slot"
         );
-        assert!(vm.contains("kernel?.resolvingRowSets(value) ?? value"));
+        assert!(vm.contains("do { return try kernel.resolvingRowSets(value) }"));
+        assert!(
+            vm.contains(r#".dict(["type": .string("error-state"), "message": .string(String(describing: error))])"#),
+            "a failed resolve paints the slot as an error-state, never an empty list"
+        );
+        assert!(!vm.contains("try? kernel"), "control: no failure is swallowed");
         assert_eq!(
             vm.matches("paintedRowSets(").count(),
             1,
@@ -2083,8 +2088,10 @@ mod tests {
         );
         assert!(vm.contains("api.postServerLeg(leg, orbital: orbital, requestTrait: requestTrait)"));
         let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
-        assert!(bridge.contains("orbital: wire.orbital,"));
-        assert!(bridge.contains("let orbital: String"));
+        assert!(bridge.contains("typealias KernelDispatchResult = KernelDispatchWire"));
+        let wire = include_str!("../renderers/swiftui/renderers/bridge/generated/KernelWire.swift");
+        assert!(wire.contains("struct KernelDispatchWire: Codable {\n    let orbital: String"));
+        assert!(!bridge.contains("orbital: wire.orbital,"), "control: the bridge no longer copies the wire field by field");
         // Control: a different module name changes nothing about the URL source.
         let other = generate_api_client_file(&OirModule::new("OtherApp", "1.0.0")).content;
         assert_eq!(other, generate_api_client_file(&module).content);
@@ -2142,7 +2149,7 @@ mod tests {
     fn theme_comes_from_kernel_snapshot() {
         let module = OirModule::new("TestApp", "1.0.0");
         let content = generate_view_model_file(&module).content;
-        assert!(content.contains("let snap = kernel.snapshot()"));
+        assert!(content.contains("let snap = try kernel.snapshot()"));
         assert!(content.contains("self.apply(resolvedTheme: snap.theme)"));
         assert!(content.contains("AlmadarTheme.from(tokens: resolved.tokens"));
     }
@@ -2195,7 +2202,7 @@ mod tests {
         assert!(content.contains("private var kernel: OrbitalKernel?"));
         assert!(content.contains("OrbitalKernel(resolvedSchemaJSON: $0, clientId: clientId)"));
         assert!(content.contains(
-            "kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON)"
+            "try kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON)"
         ));
     }
 
@@ -2271,7 +2278,7 @@ mod tests {
         let content = generate_view_model_file(&module).content;
         assert!(content.contains("func restoreOnServerFailure"));
         assert!(content
-            .contains("kernel.restore(trait: trait, entityId: entityId, snapshot: snapshot)"));
+            .contains("try kernel.restore(trait: trait, entityId: entityId, snapshot: snapshot)"));
         assert!(content.contains("states[trait] = snapshot.state"));
         assert!(content.contains("alertMessage = message"));
     }
@@ -2286,7 +2293,7 @@ mod tests {
     fn view_model_applies_server_response_with_echo_dedup() {
         let module = OirModule::new("TestApp", "1.0.0");
         let content = generate_view_model_file(&module).content;
-        assert!(content.contains("kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: alreadyDelivered)"));
+        assert!(content.contains("try kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: alreadyDelivered)"));
         // The old stateless re-dispatch loop must be gone entirely, not
         // just unused.
         assert!(!content.contains("response.emittedEvents"));
@@ -2307,7 +2314,7 @@ mod tests {
         assert!(first.contains("self?.alertMessage = message"));
         assert!(!first.contains("restoreOnServerFailure"));
         let bridge = include_str!("../renderers/swiftui/renderers/bridge/OrbitalKernelBridge.swift");
-        assert!(bridge.contains("serverLegs: wire.serverLegs)"));
+        assert!(bridge.contains("typealias KernelAppliedResult = KernelAppliedWire"));
     }
 
     /// The applied-response branch folds its outcomes' effects through the
@@ -3615,7 +3622,7 @@ mod tests {
         let ret = &vm[vm.find("private func returnHostAsk(").unwrap()..];
         assert!(ret.contains("(ok != nil ? completion[\"success\"] : completion[\"failure\"])?.stringValue else { return }"), "an undeclared route fires nothing");
         assert!(ret.contains("payload[\"key\"] = .string(key)"));
-        assert!(ret.contains("sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion[\"entity\"]?.stringValue)"));
+        assert!(ret.contains("sendEvent(trait: trait, event: event, payload: .dict(payload), entityId: completion[\"entityId\"]?.stringValue)"));
     }
 
     /// `auth/consent` is answered by name on iOS: no web authentication session is wired, so it fails `unavailable` on its failure route.
@@ -3765,7 +3772,7 @@ mod tests {
         let fold_body = &vm[fold..fold + vm[fold..].find("\n    }\n").unwrap()];
         assert!(fold_body.contains("foldResponse(frame.response"));
         assert!(fold_body.contains(
-            "fold(result: dispatch.result, requestTrait: dispatch.trait, entityId: nil)"
+            "fold(result: dispatch.dispatch, requestTrait: dispatch.trait, entityId: nil)"
         ));
         assert_eq!(
             vm.matches("private func foldResponse(").count(),

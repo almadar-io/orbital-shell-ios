@@ -34,11 +34,6 @@ struct OrbitalAuthSession: Codable, Equatable {
     let uid: String
 }
 
-struct OrbitalPersona: Equatable {
-    let id: String
-    let label: String
-}
-
 enum OrbitalAuthError: LocalizedError, Equatable {
     case notConfigured
     case provider(String)
@@ -155,34 +150,6 @@ final class OrbitalAuth: @unchecked Sendable {
         let body = AnyCodable.dict(["token": .string(customToken), "returnSecureToken": .bool(true)])
         let reply = try await post("\(config.identityToolkitBase)/accounts:signInWithCustomToken?key=\(config.apiKey)", body)
         adopt(try Self.session(fromSignInReply: reply, now: now()), persist: true)
-    }
-
-    /// The dev persona roster a server's `personasRouter` offers (only while it runs on the Auth emulator).
-    func personas(apiBase: String) async -> [OrbitalPersona] {
-        guard let url = URL(string: "\(apiBase)/api/personas") else { return [] }
-        guard let (data, status) = try? await transport.send(URLRequest(url: url)), (200..<300).contains(status),
-              let reply = try? JSONDecoder().decode(AnyCodable.self, from: data),
-              let rows = reply["personas"]?.arrayValue else { return [] }
-        return rows.compactMap { row in
-            guard let id = row["id"]?.stringValue else { return nil }
-            let name = row["name"]?.stringValue ?? id
-            let role = row["role"]?.stringValue ?? "no role"
-            return OrbitalPersona(id: id, label: "\(name) - \(role)")
-        }
-    }
-
-    func signInAsPersona(id: String, apiBase: String) async throws {
-        guard let url = URL(string: "\(apiBase)/api/personas/sign-in") else { throw OrbitalAuthError.malformedResponse("persona sign-in url") }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(AnyCodable.dict(["id": .string(id)]))
-        let (data, status) = try await transport.send(request)
-        let reply = try JSONDecoder().decode(AnyCodable.self, from: data)
-        guard (200..<300).contains(status), let customToken = reply["customToken"]?.stringValue else {
-            throw OrbitalAuthError.provider(reply["error"]?.stringValue ?? "persona sign-in failed (\(status))")
-        }
-        try await signIn(customToken: customToken)
     }
 
     /// Refreshes the ID token when fewer than `margin` seconds remain.

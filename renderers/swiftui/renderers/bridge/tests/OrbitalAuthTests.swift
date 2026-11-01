@@ -94,46 +94,15 @@ final class OrbitalAuthTests: XCTestCase {
         XCTAssertTrue(transport.requests.isEmpty)
     }
 
-    func test_persona_sign_in_exchanges_the_server_custom_token() async throws {
+    func test_custom_token_sign_in_adopts_the_session() async throws {
         let transport = FakeAuthTransport()
-        transport.replies = [
-            .init(status: 200, body: "{\"success\":true,\"customToken\":\"ct\",\"authEmulatorHost\":\"127.0.0.1:9099\",\"projectId\":\"demo-app\"}"),
-            signInReply(token: jwt("{\"sub\":\"p-1\",\"role\":\"admin\"}")),
-        ]
+        transport.replies = [signInReply(token: jwt("{\"sub\":\"p-1\",\"role\":\"admin\"}"))]
         let sut = auth(emulator, transport)
 
-        try await sut.signInAsPersona(id: "p-1", apiBase: "http://127.0.0.1:3030")
+        try await sut.signIn(customToken: "ct")
 
-        XCTAssertEqual(transport.requests[0].url?.absoluteString, "http://127.0.0.1:3030/api/personas/sign-in")
-        XCTAssertTrue(transport.requests[1].url?.absoluteString.contains("accounts:signInWithCustomToken") == true)
+        XCTAssertTrue(transport.requests[0].url?.absoluteString.contains("accounts:signInWithCustomToken") == true)
         XCTAssertEqual(sut.session?.uid, "p-1")
-    }
-
-    func test_persona_sign_in_failure_surfaces_the_server_error_and_signs_nobody_in() async {
-        let transport = FakeAuthTransport()
-        transport.replies = [.init(status: 404, body: "{\"success\":false,\"error\":\"no persona with id x\"}")]
-        let sut = auth(emulator, transport)
-        do {
-            try await sut.signInAsPersona(id: "x", apiBase: "http://127.0.0.1:3030")
-            XCTFail("an unknown persona must throw")
-        } catch {
-            XCTAssertEqual(error as? OrbitalAuthError, .provider("no persona with id x"))
-        }
-        XCTAssertNil(sut.session)
-        XCTAssertEqual(transport.requests.count, 1)
-    }
-
-    func test_personas_lists_the_roster_and_is_empty_when_the_server_offers_none() async {
-        let transport = FakeAuthTransport()
-        transport.replies = [
-            .init(status: 200, body: "{\"success\":true,\"personas\":[{\"id\":\"p-1\",\"name\":\"Maya\",\"role\":\"admin\"},{\"id\":\"p-2\"}]}"),
-            .init(status: 404, body: "{}"),
-        ]
-        let sut = auth(emulator, transport)
-        let roster = await sut.personas(apiBase: "http://h")
-        XCTAssertEqual(roster, [OrbitalPersona(id: "p-1", label: "Maya - admin"), OrbitalPersona(id: "p-2", label: "p-2 - no role")])
-        let none = await sut.personas(apiBase: "http://h")
-        XCTAssertEqual(none, [])
     }
 
     func test_refresh_runs_only_when_the_token_is_near_expiry() async throws {

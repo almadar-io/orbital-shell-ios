@@ -43,18 +43,19 @@ fn backend_emits_kernel_bridge_file() {
     assert!(bridge.content.contains("final class OrbitalKernel"));
 }
 
+const KERNEL_WIRE_SWIFT: &str = include_str!("../renderers/swiftui/renderers/bridge/generated/KernelWire.swift");
 const VIEW_MODEL_SWIFT: &str = include_str!("../hosts/OrbitalViewModel.swift.tpl");
 
 /// K5 (EXEC-DIST-7): the bridge decodes the response's `frames` delta, applies it at the version it starts from, asks
 /// the kernel for `framesSince` on a gap, and nothing reads the retired response `entityByTrait`.
 #[test]
 fn the_bridge_applies_frame_deltas_by_version_and_reads_no_response_entity_by_trait() {
-    assert!(KERNEL_BRIDGE_SWIFT.contains("let frames: KernelFrameDelta?"));
+    assert!(KERNEL_WIRE_SWIFT.contains("var frames: KernelFrameDelta?"));
     assert!(KERNEL_BRIDGE_SWIFT.contains("orbital_kernel_frames_since"));
     assert!(KERNEL_BRIDGE_SWIFT.contains("struct KernelFrameView"));
     assert!(VIEW_MODEL_SWIFT.contains("frameView.apply(delta) == .gap"));
     assert!(VIEW_MODEL_SWIFT.contains("resyncFrames"));
     assert!(!VIEW_MODEL_SWIFT.contains("response.entityByTrait"));
-    let response_struct = KERNEL_BRIDGE_SWIFT.split("struct KernelEventResponse").nth(1).unwrap().split("struct KernelTraitFrom").next().unwrap();
+    let response_struct = KERNEL_WIRE_SWIFT.split("struct KernelEventResponse").nth(1).unwrap().split("struct KernelFiredTick").next().unwrap();
     assert!(!response_struct.contains("entityByTrait"), "the response keeps no entityByTrait");
 }

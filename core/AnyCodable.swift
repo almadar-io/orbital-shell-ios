@@ -26,7 +26,7 @@ enum AnyCodable: Codable, Equatable {
         } else if container.decodeNil() {
             self = .null
         } else {
-            self = .null
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "not a value AnyCodable can hold")
         }
     }
 

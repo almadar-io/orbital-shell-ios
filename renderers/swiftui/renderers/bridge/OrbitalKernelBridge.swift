@@ -133,30 +133,24 @@ func orbital_kernel_last_error(_ handle: OrbitalKernelHandleRef?) -> UnsafeMutab
 @_silgen_name("orbital_kernel_free_string")
 func orbital_kernel_free_string(_ s: UnsafeMutablePointer<CChar>?)
 
-// MARK: - Wire models (mirror orbital-core's canonical EventResponse/EventRequest/
-// TraitSnapshot/DispatchMode JSON exactly — see kernel_c_api.rs's doc comment for
-// the envelope shape `orbital_kernel_dispatch` returns)
+// MARK: - Wire models
+// The kernel's wire types are generated from orbital-core (`generated/KernelWire.swift`); this file
+// names the ones the host uses and keeps the host-side view of the frames it holds.
 
-struct KernelEventSource: Codable {
-    let orbital: String?
-    let trait: String?
+typealias KernelEventSource = KernelBusEventSource
+typealias KernelServerLeg = KernelEventRequest
+typealias KernelSeed = KernelSeedWire
+typealias KernelDispatchResult = KernelDispatchWire
+typealias KernelFrameResult = KernelFrameWire
+typealias KernelAppliedResult = KernelAppliedWire
+typealias KernelTraitEventPair = KernelTupleStringString
+
+extension KernelTupleStringString {
+    var trait: String { first }
+    var event: String { second }
 }
 
-struct KernelEmittedEvent: Codable {
-    let event: String
-    let payload: AnyCodable?
-    let source: KernelEventSource?
-}
-
-/// Mirror of `orbital_core::FrameDelta` (EXEC-DIST-7): what a response changes in the frames its client holds, against
-/// the kernel's view record. Each op is `["put", frame, {fields}]`, `["set", {frame: {fields}}]`, `["del", frame]` or
-/// `["clear"]`. A delta without `session` is unversioned and applies wherever it lands.
-struct KernelFrameDelta: Codable {
-    let session: String?
-    let from: UInt64
-    let to: UInt64
-    let ops: [AnyCodable]
-
+extension KernelFrameDelta {
     /// A snapshot starts from nothing: `from` 0 and a leading `clear`.
     var isSnapshot: Bool {
         from == 0 && ops.first?.arrayValue?.first?.stringValue == "clear"
@@ -207,73 +201,6 @@ struct KernelFrameView {
     }
 }
 
-/// Mirror of `orbital_core::EventResponse` — NOT the same type as this
-/// project's generated `EventResponse` (ApiClient.swift), which carries the
-/// old per-shell wire shape.
-struct KernelEventResponse: Codable {
-    let success: Bool
-    let transitioned: Bool
-    let states: [String: String]
-    let emittedEvents: [KernelEmittedEvent]
-    let data: [String: [AnyCodable]]?
-    let frames: KernelFrameDelta?
-    let clientEffectsByTrait: [AnyCodable]?
-    let effectResults: [AnyCodable]?
-    let guardFailed: String?
-    let error: String?
-}
-
-struct KernelTraitFrom: Codable {
-    let trait: String
-    let from: String
-}
-
-/// Mirror of `orbital_core::EventRequest` — the "server leg" a dispatch
-/// produces when its resolved `DispatchMode` isn't `hybridClientOnly`.
-struct KernelServerLeg: Codable {
-    let event: String
-    let eventId: String?
-    let payload: AnyCodable?
-    let entityId: String?
-    let targetTrait: String?
-    let user: AnyCodable?
-    let clientId: String?
-    let tick: String?
-    let sourceTrait: String?
-    let traits: [KernelTraitFrom]?
-    let entityByTrait: [String: AnyCodable]?
-    let behavior: String?
-    let delivery: AnyCodable?
-    let dispatchLog: AnyCodable?
-    /// Not a dispatch: the client holds this version of the session's frames and asks what it misses.
-    let framesSince: UInt64?
-}
-
-/// The `(trait, event)` that began a dispatch; a leg failure is reported against its event.
-struct KernelSeed: Codable {
-    let trait: String
-    let event: String
-}
-
-/// A server leg and the orbital that owns the trait it is addressed to (the route it posts to).
-struct KernelRoutedLeg: Codable {
-    let orbital: String
-    let leg: KernelServerLeg
-}
-
-/// Mirror of `orbital_core::runtime::TraitSnapshot`.
-struct KernelTraitSnapshot: Codable {
-    let state: String
-    let entity: AnyCodable
-}
-
-/// Mirror of `orbital_core::runtime::DispatchMode`.
-enum KernelDispatchMode: String, Codable {
-    case persistedAwaited
-    case hybridClientOnly
-    case runtimeOptimistic
-}
-
 /// Mirror of `orbital_core::runtime::theme::ResolvedTheme` — the `@currentTheme`
 /// snapshot value (`orbital_kernel_snapshot`'s `theme` field, C1c). `tokens`
 /// decodes through the generated `ThemeTokensJSON` (`AlmadarTheme.swift`) so
@@ -285,93 +212,29 @@ struct KernelResolvedTheme: Decodable {
     let tokens: ThemeTokensJSON
 }
 
-/// One `(trait, event)` pair already realized locally — decoded from the
-/// `alreadyDelivered`/`applied` wire arrays (`[[trait, event], ...]`).
-struct KernelTraitEventPair {
-    let trait: String
-    let event: String
-}
+/// Why a call into the kernel gave no usable answer: the kernel said so, or its answer is not the wire shape.
+enum KernelWireError: Error, CustomStringConvertible {
+    case native(String)
+    case decode(type: String, DecodingError)
 
-private func decodePairs(_ raw: [[String]]) -> [KernelTraitEventPair] {
-    raw.compactMap { pair in
-        guard pair.count == 2 else { return nil }
-        return KernelTraitEventPair(trait: pair[0], event: pair[1])
-    }
-}
-
-/// `orbital_kernel_dispatch`'s decoded envelope.
-struct KernelDispatchResult {
-    /// The orbital that owns the dispatched trait; the server leg posts to `/api/orbitals/<orbital>/events`.
-    let orbital: String
-    let seed: KernelSeed
-    let response: KernelEventResponse
-    let serverLegs: [KernelRoutedLeg]
-    let mode: KernelDispatchMode
-    let snapshot: KernelTraitSnapshot?
-    let alreadyDelivered: [KernelTraitEventPair]
-    /// The traits awaiting this dispatch's server legs (orbital-core `AwaitingTrait`).
-    let awaiting: [KernelAwaitingTrait]
-
-    fileprivate struct Wire: Codable {
-        let orbital: String
-        let seed: KernelSeed
-        let response: KernelEventResponse
-        let serverLegs: [KernelRoutedLeg]
-        let mode: KernelDispatchMode
-        let snapshot: KernelTraitSnapshot?
-        let alreadyDelivered: [[String]]
-        let awaiting: [KernelAwaitingTrait]
-    }
-}
-
-/// A trait awaiting a server round trip, keyed by the transition its local run took.
-struct KernelAwaitingTrait: Codable {
-    let trait: String
-    let event: String
-    let from: String
-}
-
-/// One `(trait, tick)` pair a frame ran.
-struct KernelFiredTick: Codable {
-    let trait: String
-    let tick: String
-}
-
-/// A cascade a tick's `emit` started: the dispatch envelope plus the emitting trait, folded and
-/// (when it carries a server leg) posted exactly like a tapped event.
-struct KernelFrameDispatch {
-    let trait: String
-    let result: KernelDispatchResult
-
-    fileprivate struct Wire: Decodable {
-        let trait: String
-        let dispatch: KernelDispatchResult.Wire
-
-        private enum CodingKeys: String, CodingKey { case trait }
-
-        init(from decoder: Decoder) throws {
-            trait = try decoder.container(keyedBy: CodingKeys.self).decode(String.self, forKey: .trait)
-            dispatch = try KernelDispatchResult.Wire(from: decoder)
+    var description: String {
+        switch self {
+        case .native(let message): return message
+        case .decode(let type, let error): return "the kernel's answer is not a \(type): \(error)"
         }
     }
 }
 
-/// `orbital_kernel_frame`'s decoded envelope: the merged tick response plus one dispatch per tick `emit`.
-struct KernelFrameResult {
-    /// The ticks that ran, under the orbital that declares each.
-    let fired: [String: [KernelFiredTick]]
-    let response: KernelEventResponse
-    let dispatches: [KernelFrameDispatch]
-    /// Server effects a tick delegated: a tick has no server leg, so they are discarded.
-    let droppedServerEffects: Int
-    let errors: [String]
+private struct KernelErrorWire: Decodable {
+    let error: String
+}
 
-    fileprivate struct Wire: Decodable {
-        let fired: [String: [KernelFiredTick]]
-        let response: KernelEventResponse
-        let dispatches: [KernelFrameDispatch.Wire]
-        let droppedServerEffects: Int
-        let errors: [String]
+private func decodeWire<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+    do {
+        return try JSONDecoder().decode(T.self, from: data)
+    } catch let failure as DecodingError {
+        if let answer = try? JSONDecoder().decode(KernelErrorWire.self, from: data) { throw KernelWireError.native(answer.error) }
+        throw KernelWireError.decode(type: String(describing: T.self), failure)
     }
 }
 
@@ -383,35 +246,10 @@ enum KernelFrameOutcome {
     case failed(String)
 }
 
-/// `orbital_kernel_resolve_rows`'s answer: the rows a row-set reference resolves to now, in its order. An
-/// `{"error": ...}` answer has no `rows` and fails this decode.
+/// `orbital_kernel_resolve_rows`'s answer: the rows a row-set reference resolves to now, in its order.
 struct KernelRowPage: Decodable {
     let rows: [AnyCodable]
     let total: Int
-}
-
-struct KernelFramesResync: Codable {
-    let session: String
-    let since: UInt64
-}
-
-/// `orbital_kernel_apply_server_response`'s decoded envelope. A `{"error":
-/// ...}` response (no `applied` key) fails this decode — `applyServerResponse`
-/// returns `nil` and the caller reads `lastError`, same contract as `dispatch`.
-struct KernelAppliedResult {
-    let applied: [KernelTraitEventPair]
-    let response: KernelEventResponse
-    /// Set when the host numbered frames past the version this kernel holds: ask for `framesSince(since)`.
-    let resync: KernelFramesResync?
-    /// The legs the fold itself owes the host (an own continuation such as a refetch after a persist's success), to post and fold in turn.
-    let serverLegs: [KernelRoutedLeg]
-
-    fileprivate struct Wire: Codable {
-        let applied: [[String]]
-        let response: KernelEventResponse
-        let resync: KernelFramesResync?
-        let serverLegs: [KernelRoutedLeg]
-    }
 }
 
 // MARK: - Swift-facing kernel handle
@@ -452,13 +290,14 @@ final class OrbitalKernel {
         return String(cString: ptr)
     }
 
-    private func consume(_ ptr: UnsafeMutablePointer<CChar>?) -> Data? {
-        guard let ptr = ptr else { return nil }
+    /// The answer the native call returned; a missing answer is the kernel's own last error.
+    private func consume(_ ptr: UnsafeMutablePointer<CChar>?) throws -> Data {
+        guard let ptr = ptr else { throw KernelWireError.native(lastError.isEmpty ? "the kernel gave no answer" : lastError) }
         defer { orbital_kernel_free_string(ptr) }
-        return String(cString: ptr).data(using: .utf8)
+        return Data(String(cString: ptr).utf8)
     }
 
-    func dispatch(trait: String, entityId: String?, event: String, payloadJSON: String?) -> KernelDispatchResult? {
+    func dispatch(trait: String, entityId: String?, event: String, payloadJSON: String?) throws -> KernelDispatchResult {
         let raw: UnsafeMutablePointer<CChar>? = trait.withCString { traitPtr in
             event.withCString { eventPtr in
                 withOptionalCString(entityId) { entityPtr in
@@ -468,44 +307,27 @@ final class OrbitalKernel {
                 }
             }
         }
-        guard let data = consume(raw) else { return nil }
-        guard let wire = try? JSONDecoder().decode(KernelDispatchResult.Wire.self, from: data) else { return nil }
-        return KernelDispatchResult(
-            orbital: wire.orbital,
-            seed: wire.seed,
-            response: wire.response,
-            serverLegs: wire.serverLegs,
-            mode: wire.mode,
-            snapshot: wire.snapshot,
-            alreadyDelivered: decodePairs(wire.alreadyDelivered),
-            awaiting: wire.awaiting
-        )
+        return try decodeWire(KernelDispatchResult.self, from: consume(raw))
     }
 
     /// The frame delta a painter at version `since` of this kernel's frames needs: empty when current, else a snapshot.
-    func framesSince(_ since: UInt64) -> KernelFrameDelta? {
-        guard let data = consume(orbital_kernel_frames_since(handle, since)) else { return nil }
-        return try? JSONDecoder().decode(KernelFrameDelta.self, from: data)
+    func framesSince(_ since: UInt64) throws -> KernelFrameDelta {
+        try decodeWire(KernelFrameDelta.self, from: consume(orbital_kernel_frames_since(handle, since)))
     }
 
-    func applyServerResponse(responseJSON: String, alreadyDelivered: [KernelTraitEventPair]) -> KernelAppliedResult? {
-        let alreadyDeliveredJSON = (try? JSONEncoder().encode(alreadyDelivered.map { [$0.trait, $0.event] }))
-            .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+    func applyServerResponse(responseJSON: String, alreadyDelivered: [KernelTraitEventPair]) throws -> KernelAppliedResult {
+        let alreadyDeliveredJSON = String(decoding: try JSONEncoder().encode(alreadyDelivered), as: UTF8.self)
         let raw: UnsafeMutablePointer<CChar>? = responseJSON.withCString { responsePtr in
             alreadyDeliveredJSON.withCString { alreadyPtr in
                 orbital_kernel_apply_server_response(handle, responsePtr, alreadyPtr)
             }
         }
-        guard let data = consume(raw) else { return nil }
-        guard let wire = try? JSONDecoder().decode(KernelAppliedResult.Wire.self, from: data) else { return nil }
-        return KernelAppliedResult(applied: decodePairs(wire.applied), response: wire.response, resync: wire.resync, serverLegs: wire.serverLegs)
+        return try decodeWire(KernelAppliedResult.self, from: consume(raw))
     }
 
     /// Roll `trait` back; returns the repaint the rollback owes traits bound to its entity.
-    func restore(trait: String, entityId: String?, snapshot: KernelTraitSnapshot) -> KernelEventResponse? {
-        guard let data = try? JSONEncoder().encode(snapshot),
-              let snapshotJSON = String(data: data, encoding: .utf8)
-        else { return nil }
+    func restore(trait: String, entityId: String?, snapshot: KernelTraitSnapshot) throws -> KernelEventResponse {
+        let snapshotJSON = String(decoding: try JSONEncoder().encode(snapshot), as: UTF8.self)
         let raw: UnsafeMutablePointer<CChar>? = trait.withCString { traitPtr in
             snapshotJSON.withCString { snapshotPtr in
                 withOptionalCString(entityId) { entityPtr in
@@ -513,11 +335,10 @@ final class OrbitalKernel {
                 }
             }
         }
-        guard let repaint = consume(raw) else { return nil }
-        return try? JSONDecoder().decode(KernelEventResponse.self, from: repaint)
+        return try decodeWire(KernelEventResponse.self, from: consume(raw))
     }
 
-    func tick(trait: String, tickName: String, entityId: String?) -> KernelEventResponse? {
+    func tick(trait: String, tickName: String, entityId: String?) throws -> KernelEventResponse {
         let raw: UnsafeMutablePointer<CChar>? = trait.withCString { traitPtr in
             tickName.withCString { tickPtr in
                 withOptionalCString(entityId) { entityPtr in
@@ -525,37 +346,18 @@ final class OrbitalKernel {
                 }
             }
         }
-        guard let data = consume(raw) else { return nil }
-        return try? JSONDecoder().decode(KernelEventResponse.self, from: data)
+        return try decodeWire(KernelEventResponse.self, from: consume(raw))
     }
 
     /// Runs one host frame of the native tick clock (`nowMs` = the host's monotonic frame time).
     func frame(nowMs: UInt64) -> KernelFrameOutcome {
-        guard let data = consume(orbital_kernel_frame(handle, nowMs)) else { return .idle }
-        if let wire = try? JSONDecoder().decode(KernelFrameResult.Wire.self, from: data) {
-            return .fired(KernelFrameResult(
-                fired: wire.fired,
-                response: wire.response,
-                dispatches: wire.dispatches.map { d in
-                    KernelFrameDispatch(
-                        trait: d.trait,
-                        result: KernelDispatchResult(
-                            orbital: d.dispatch.orbital,
-                            seed: d.dispatch.seed,
-                            response: d.dispatch.response,
-                            serverLegs: d.dispatch.serverLegs,
-                            mode: d.dispatch.mode,
-                            snapshot: d.dispatch.snapshot,
-                            alreadyDelivered: decodePairs(d.dispatch.alreadyDelivered),
-                            awaiting: d.dispatch.awaiting
-                        )
-                    )
-                },
-                droppedServerEffects: wire.droppedServerEffects,
-                errors: wire.errors
-            ))
+        guard let ptr = orbital_kernel_frame(handle, nowMs) else { return .idle }
+        defer { orbital_kernel_free_string(ptr) }
+        do {
+            return .fired(try decodeWire(KernelFrameResult.self, from: Data(String(cString: ptr).utf8)))
+        } catch {
+            return .failed(String(describing: error))
         }
-        return .failed(lastError.isEmpty ? "frame failed" : lastError)
     }
 
     /// Stops the native tick clock (app backgrounded); declared ticks and their phase are kept.
@@ -580,38 +382,32 @@ final class OrbitalKernel {
     }
 
     /// `{"states": {"<trait>": "<state>", ...}, "theme": KernelResolvedTheme}`
-    /// for every trait on the handle's bound orbital (C1c/B7) — `theme` is
-    /// `nil` only if the native side's `theme` field somehow fails to decode
-    /// (the generated view model falls back to `AlmadarTheme.fallback`).
-    func snapshot() -> (states: [String: String], theme: KernelResolvedTheme?, canvasTheme: AnyCodable?, motion: AnyCodable?) {
-        guard let data = consume(orbital_kernel_snapshot(handle)) else { return ([:], nil, nil, nil) }
+    /// for every trait on the handle's bound orbital (C1c/B7).
+    func snapshot() throws -> (states: [String: String], theme: KernelResolvedTheme?, canvasTheme: AnyCodable?, motion: AnyCodable?) {
         struct Wire: Decodable { let states: [String: String]; let theme: KernelResolvedTheme?; let canvasTheme: AnyCodable?; let motion: AnyCodable? }
-        guard let wire = try? JSONDecoder().decode(Wire.self, from: data) else { return ([:], nil, nil, nil) }
+        let wire = try decodeWire(Wire.self, from: consume(orbital_kernel_snapshot(handle)))
         return (wire.states, wire.theme, wire.canvasTheme, wire.motion)
     }
 
     /// The rows a row-set reference (the `ref` of a `$rowSet` marker) resolves to now for the current viewer, in the
-    /// reference's order (`orbital_kernel_resolve_rows`); `nil` when the kernel cannot resolve it (read `lastError`).
-    func resolveRows(reference: AnyCodable) -> [AnyCodable]? {
-        guard let data = try? JSONEncoder().encode(reference),
-              let referenceJSON = String(data: data, encoding: .utf8)
-        else { return nil }
+    /// reference's order (`orbital_kernel_resolve_rows`).
+    func resolveRows(reference: AnyCodable) throws -> [AnyCodable] {
+        let referenceJSON = String(decoding: try JSONEncoder().encode(reference), as: UTF8.self)
         let raw: UnsafeMutablePointer<CChar>? = referenceJSON.withCString { orbital_kernel_resolve_rows(handle, $0) }
-        guard let answer = consume(raw), let page = try? JSONDecoder().decode(KernelRowPage.self, from: answer) else { return nil }
-        return page.rows
+        return try decodeWire(KernelRowPage.self, from: consume(raw)).rows
     }
 
     /// `value` with every row-set marker replaced by the rows [resolveRows] answers; a reference that cannot be
-    /// resolved becomes an empty list, never a stale copy.
-    func resolvingRowSets(_ value: AnyCodable) -> AnyCodable {
+    /// resolved throws its typed `KernelWireError` (never an empty list), so the caller fails that slot.
+    func resolvingRowSets(_ value: AnyCodable) throws -> AnyCodable {
         switch value {
         case .dict(let fields):
             if fields["$rowSet"]?.boolValue == true, let reference = fields["ref"] {
-                return .array(resolveRows(reference: reference) ?? [])
+                return .array(try resolveRows(reference: reference))
             }
-            return .dict(fields.mapValues { resolvingRowSets($0) })
+            return .dict(try fields.mapValues { try resolvingRowSets($0) })
         case .array(let items):
-            return .array(items.map { resolvingRowSets($0) })
+            return .array(try items.map { try resolvingRowSets($0) })
         default:
             return value
         }

@@ -30,8 +30,11 @@ class OrbitalViewModel: ObservableObject {
     }
     /// `value` with every row-set marker replaced by the rows the kernel's one resolver answers now, re-checked
     /// for the signed-in viewer (EXEC-RENDER-3). A rows-changed repaint re-applies the render and lands here again.
+    /// A reference the kernel cannot resolve paints that slot as an `error-state` node carrying the typed failure.
     private func paintedRowSets(_ value: AnyCodable) -> AnyCodable {
-        kernel?.resolvingRowSets(value) ?? value
+        guard let kernel else { return value }
+        do { return try kernel.resolvingRowSets(value) }
+        catch { return .dict(["type": .string("error-state"), "message": .string(String(describing: error))]) }
     }
     /// `uiSlots`, with a `skeleton` node in an awaiting slot that is still empty.
     var slotsWithAwaiting: [String: AnyCodable] {
@@ -84,8 +87,6 @@ class OrbitalViewModel: ObservableObject {
     private let api: OrbitalAPI
     let auth: OrbitalAuth
     private lazy var sessionBinding = OrbitalSessionBinding(api: api)
-    /// The server the host sign-in lists dev personas from and exchanges their custom token with.
-    var apiBase: String { api.baseUrl }
     /// Per-launch id, the live-broadcast origin-exclusion key — mirrors the
     /// web bridge's `crypto.randomUUID()` (`useOrbitalBridge.ts`).
     private let clientId = UUID().uuidString
@@ -233,10 +234,14 @@ class OrbitalViewModel: ObservableObject {
     func toggleThemeMode() {
         guard let kernel = kernel else { return }
         kernel.setThemeMode(themeIsDark ? "light" : "dark")
-        let snap = kernel.snapshot()
-        apply(resolvedTheme: snap.theme)
-        canvasTheme = snap.canvasTheme
-        motion = snap.motion
+        do {
+            let snap = try kernel.snapshot()
+            apply(resolvedTheme: snap.theme)
+            canvasTheme = snap.canvasTheme
+            motion = snap.motion
+        } catch {
+            alertMessage = String(describing: error)
+        }
     }
 
     /// What the host's auth has resolved the viewer to be. A DEBUG launch carrying the persona
@@ -306,11 +311,16 @@ class OrbitalViewModel: ObservableObject {
                     self.isReady = true
                     return
                 }
-                let snap = kernel.snapshot()
-                self.states.merge(snap.states) { _, new in new }
-                self.apply(resolvedTheme: snap.theme)
-                self.canvasTheme = snap.canvasTheme
-                self.motion = snap.motion
+                do {
+                    let snap = try kernel.snapshot()
+                    self.states.merge(snap.states) { _, new in new }
+                    self.apply(resolvedTheme: snap.theme)
+                    self.canvasTheme = snap.canvasTheme
+                    self.motion = snap.motion
+                } catch {
+                    OrbitalViewModel.eventLog.error("kernel snapshot failed: \(String(describing: error), privacy: .public)")
+                    self.alertMessage = String(describing: error)
+                }
                 self.restoreSession()
                 self.openLivePush()
                 self.initAllTraits()
@@ -410,7 +420,7 @@ class OrbitalViewModel: ObservableObject {
     private func foldFrame(_ frame: KernelFrameResult) {
         foldResponse(frame.response)
         for dispatch in frame.dispatches {
-            fold(result: dispatch.result, requestTrait: dispatch.trait, entityId: nil)
+            fold(result: dispatch.dispatch, requestTrait: dispatch.trait, entityId: nil)
         }
         for error in frame.errors {
             OrbitalViewModel.eventLog.error("tick failed: \(error, privacy: .public)")
@@ -515,8 +525,11 @@ class OrbitalViewModel: ObservableObject {
             return
         }
         let payloadJSON = payload.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) }
-        guard let result = kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON) else {
-            alertMessage = kernel.lastError.isEmpty ? "Event failed" : kernel.lastError
+        let result: KernelDispatchResult
+        do {
+            result = try kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON)
+        } catch {
+            alertMessage = String(describing: error)
             return
         }
         OrbitalViewModel.eventLog.info("dispatch \(trait, privacy: .public) \(event, privacy: .public) mode=\(result.mode.rawValue, privacy: .public) states=\(result.response.states.keys.joined(separator: ","), privacy: .public) serverLegs=\(result.serverLegs.count, privacy: .public)")
@@ -532,14 +545,17 @@ class OrbitalViewModel: ObservableObject {
             entityData.merge(data) { _, new in new }
         }
         if let delta = response.frames {
-            if frameView.apply(delta) == .gap, let snapshot = kernel?.framesSince(frameView.version) {
-                _ = frameView.apply(snapshot)
+            if frameView.apply(delta) == .gap, let kernel = kernel {
+                do {
+                    _ = frameView.apply(try kernel.framesSince(frameView.version))
+                } catch {
+                    alertMessage = String(describing: error)
+                }
             }
             fields = frameView.frames
         }
         for entry in response.clientEffectsByTrait ?? [] {
-            guard let dict = entry.dictValue, let trait = dict["traitName"]?.stringValue, let effect = dict["effect"] else { continue }
-            effectHandlers.apply(effect: effect, requestTrait: trait)
+            effectHandlers.apply(effect: entry.effect, requestTrait: entry.traitName)
         }
         paintGeneration += 1
     }
@@ -700,8 +716,11 @@ class OrbitalViewModel: ObservableObject {
                 guard let self = self, let kernel = self.kernel else { return }
                 switch result {
                 case .success(let posted) where posted.response.success:
-                    guard let applied = kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: alreadyDelivered) else {
-                        outcome(.failed(kernel.lastError.isEmpty ? "apply_server_response failed" : kernel.lastError), [])
+                    let applied: KernelAppliedResult
+                    do {
+                        applied = try kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: alreadyDelivered)
+                    } catch {
+                        outcome(.failed(String(describing: error)), [])
                         return
                     }
                     // `KernelTraitEventPair.event` carries the NEW STATE here
@@ -726,12 +745,15 @@ class OrbitalViewModel: ObservableObject {
 
     /// The host numbered frames past the version the kernel holds: post `framesSince` and fold the snapshot it answers.
     private func resyncFrames(_ resync: KernelFramesResync, orbital: String, requestTrait: String, clientId: String?) {
-        let ask = KernelServerLeg(event: "$FRAMES", eventId: nil, payload: nil, entityId: nil, targetTrait: requestTrait, user: nil, clientId: clientId, tick: nil, sourceTrait: nil, traits: nil, entityByTrait: nil, behavior: nil, delivery: nil, dispatchLog: nil, framesSince: resync.since)
+        let ask = KernelServerLeg(event: "$FRAMES", targetTrait: requestTrait, clientId: clientId, framesSince: resync.since)
         api.postServerLeg(ask, orbital: orbital, requestTrait: requestTrait) { [weak self] result in
             DispatchQueue.main.async {
-                guard let self = self, let kernel = self.kernel, case .success(let posted) = result, posted.response.success,
-                      let applied = kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: []) else { return }
-                self.foldResponse(applied.response)
+                guard let self = self, let kernel = self.kernel, case .success(let posted) = result, posted.response.success else { return }
+                do {
+                    self.foldResponse(try kernel.applyServerResponse(responseJSON: posted.json, alreadyDelivered: []).response)
+                } catch {
+                    self.alertMessage = String(describing: error)
+                }
             }
         }
     }
@@ -743,9 +765,12 @@ class OrbitalViewModel: ObservableObject {
     private func restoreOnServerFailure(message: String, trait: String, event: String, entityId: String?, snapshot: KernelTraitSnapshot?) {
         OrbitalViewModel.eventLog.error("restoring \(trait, privacy: .public) after server error: \(message, privacy: .public)")
         if let kernel = kernel, let snapshot = snapshot {
-            let repaint = kernel.restore(trait: trait, entityId: entityId, snapshot: snapshot)
             states[trait] = snapshot.state
-            if let repaint = repaint { foldResponse(repaint) }
+            do {
+                foldResponse(try kernel.restore(trait: trait, entityId: entityId, snapshot: snapshot))
+            } catch {
+                OrbitalViewModel.eventLog.error("restore of \(trait, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+            }
         }
         alertMessage = message
     }
@@ -759,7 +784,13 @@ class OrbitalViewModel: ObservableObject {
         guard item.originClientId != clientId else { return }
         guard let trait = item.source?.trait else { return }
         let payloadJSON = item.payload.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) }
-        guard let result = kernel.dispatch(trait: trait, entityId: nil, event: item.event, payloadJSON: payloadJSON) else { return }
+        let result: KernelDispatchResult
+        do {
+            result = try kernel.dispatch(trait: trait, entityId: nil, event: item.event, payloadJSON: payloadJSON)
+        } catch {
+            OrbitalViewModel.eventLog.error("livepush \(trait, privacy: .public) \(item.event, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+            return
+        }
         OrbitalViewModel.eventLog.info("livepush \(trait, privacy: .public) \(item.event, privacy: .public) mode=\(result.mode.rawValue, privacy: .public)")
         fold(result: result, requestTrait: trait, entityId: nil)
     }

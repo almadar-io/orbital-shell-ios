@@ -8,7 +8,8 @@ use orbital_core_base::ir::OirModule;
 use orbital_shell_ios::IosBackend;
 
 const PLATFORM_EXTENSIONS: [&str; 4] = ["swift", "kt", "h", "modulemap"];
-const BRIDGE_FILES: [&str; 6] = [
+const BRIDGE_FILES: [&str; 7] = [
+    "generated/KernelWire.swift",
     "OrbitalAuth.swift",
     "OrbitalCanvas.modulemap",
     "OrbitalGameBridge.swift",

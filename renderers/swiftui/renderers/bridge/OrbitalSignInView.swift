@@ -9,18 +9,16 @@ enum SignInIds {
     static let signOut = "action-signin-signout"
     static let error = "signin-error"
     static let status = "signin-status"
-    static func persona(_ id: String) -> String { "action-signin-persona-" + id }
 }
 
 /// The host's sign-in route (`HOST_SIGN_IN_ROUTE`, `/login`): the native twin of the web template's
-/// `Login` and dev `PersonaSwitcher`. The provider call and the session live in `OrbitalAuth`; this
+/// `Login`. The provider call and the session live in `OrbitalAuth`; this
 /// view only collects input and shows the outcome. A failure is shown here and nothing is signed in.
 struct OrbitalSignInView: View {
     @ObservedObject var viewModel: OrbitalViewModel
     @Environment(\.almadarTheme) private var theme
     @State private var email = ""
     @State private var password = ""
-    @State private var personas: [OrbitalPersona] = []
     @State private var failure: String?
     @State private var busy = false
 
@@ -55,7 +53,6 @@ struct OrbitalSignInView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(theme.color.background.ignoresSafeArea())
-        .task { personas = await viewModel.auth.personas(apiBase: viewModel.apiBase) }
     }
 
     @ViewBuilder
@@ -76,19 +73,6 @@ struct OrbitalSignInView: View {
         .buttonStyle(.borderedProminent)
         .disabled(busy)
         .accessibilityIdentifier(SignInIds.submit)
-        if !personas.isEmpty {
-            Text("Dev personas")
-                .font(.caption)
-                .foregroundColor(theme.color.mutedForeground)
-            ForEach(personas, id: \.id) { persona in
-                Button(persona.label) {
-                    run { try await viewModel.auth.signInAsPersona(id: persona.id, apiBase: viewModel.apiBase) }
-                }
-                .buttonStyle(.bordered)
-                .disabled(busy)
-                .accessibilityIdentifier(SignInIds.persona(persona.id))
-            }
-        }
     }
 
     private func run(_ signIn: @escaping () async throws -> Void) {
