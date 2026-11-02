@@ -6,6 +6,10 @@ license = "BUSL-1.1"
 repository = "https://github.com/almadar-io/orbital-shell-ios"
 description = "Native iOS shell for the Orbital compiler (SwiftUI)."
 
+
+# The orb versions this shell program runs under (its npm package records it as orbProgram.compiler).
+[package.metadata.orb]
+compiler = ">=18.0.0"
 [dependencies]
 orbital-core-base = { git = "https://github.com/almadar-io/orbital-core", branch = "main" }
 orbital-core-eval = { git = "https://github.com/almadar-io/orbital-core", branch = "main" }
