@@ -8,7 +8,7 @@
 
 </div>
 
-<p align="center"><sub>Part of <a href="https://github.com/almadar-io/orb"><b>Orb</b></a>: the language where the rule is the program. <a href="https://orb.almadar.io">orb.almadar.io</a></sub></p>
+<p align="center"><sub>Part of <a href="https://github.com/almadar-io/orb"><b>Orb</b></a>: a programming language of composable state machines. <a href="https://orb.almadar.io">orb.almadar.io</a></sub></p>
 
 The iOS shell turns a compiled Orbital program into a SwiftUI app project. It carries the iOS project template and the generated SwiftUI renderer pack, and links the Almadar kernel and canvas as a static library.
 
