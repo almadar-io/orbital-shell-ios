@@ -56,6 +56,11 @@ void orbital_canvas_set_clock(
     double ms
 );
 
+void orbital_canvas_set_epoch_clock(
+    OrbitalCanvas *renderer,
+    double epoch_ms
+);
+
 void orbital_canvas_set_motion(
     OrbitalCanvas *renderer,
     int32_t enabled

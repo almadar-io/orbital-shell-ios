@@ -63,6 +63,9 @@ func orbital_canvas_set_scale(
 @_silgen_name("orbital_canvas_set_clock")
 func orbital_canvas_set_clock(_ renderer: OrbitalCanvasHandle, _ ms: Double)
 
+@_silgen_name("orbital_canvas_set_epoch_clock")
+func orbital_canvas_set_epoch_clock(_ renderer: OrbitalCanvasHandle, _ epochMs: Double)
+
 /// Allow (1) or forbid (0) motion; forbidden, animated scenes draw their rest frame.
 @_silgen_name("orbital_canvas_set_motion")
 func orbital_canvas_set_motion(_ renderer: OrbitalCanvasHandle, _ enabled: Int32)
@@ -411,6 +414,7 @@ final class OrbitalGameMTKCoordinator: NSObject, MTKViewDelegate {
             pendingScene = nil
         }
         orbital_canvas_set_clock(h, CACurrentMediaTime() * 1000)
+        orbital_canvas_set_epoch_clock(h, Date().timeIntervalSince1970 * 1000)
         orbital_canvas_render(h)
         if SystemFontSource.supplyMissing() { orbital_canvas_render(h) }
         AssetGeneration.shared.poll()
