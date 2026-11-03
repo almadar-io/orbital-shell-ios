@@ -152,6 +152,7 @@ struct KernelFrameDelta: Codable {
     let to: UInt64
     let ops: [AnyCodable]
     var identity: KernelFrameIdentity? = nil
+    var theme: KernelFrameTheme? = nil
 }
 
 struct KernelFrameDispatch: Codable {
@@ -177,6 +178,10 @@ struct KernelFrameDispatch: Codable {
 
 struct KernelFrameIdentity: Codable {
     var user: AnyCodable? = nil
+}
+
+struct KernelFrameTheme: Codable {
+    var key: String? = nil
 }
 
 struct KernelFrameWire: Codable {
