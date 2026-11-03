@@ -7,7 +7,6 @@
     "iconEmoji": "🚶",
     "description": "Step forward one tile"
   },
-  "activeFilters": {},
   "aria-busy": false,
   "aria-current": "page",
   "aria-describedby": "aria-describedby",
@@ -33,21 +32,9 @@
   "disabled": false,
   "enter": "none",
   "enterDelay": 1,
-  "isLoading": false,
   "lang": "lang",
-  "page": 1,
-  "pageSize": 1,
   "role": "alert",
-  "searchValue": "searchValue",
-  "selectedIds": [
-    "selectedIds 1",
-    "selectedIds 2",
-    "selectedIds 3"
-  ],
   "size": "md",
   "skeleton": "header",
-  "sortBy": "sortBy",
-  "sortDirection": "asc",
-  "tabIndex": -1,
-  "totalCount": 1
+  "tabIndex": -1
 }
