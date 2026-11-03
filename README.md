@@ -136,8 +136,7 @@ CI also runs `node renderers/swiftui/scripts/check-pack.mjs` before `cargo test`
 
 ## Docs
 
-- [Almadar_Orbital_Shell_iOS.md](https://github.com/itechdom/kflow.ai/blob/main/docs/Almadar_Orbital_Shell_iOS.md)
-- [Almadar_Execution_Semantics.md](https://github.com/itechdom/kflow.ai/blob/main/docs/Almadar_Execution_Semantics.md)
+- [Orb documentation](https://orb.almadar.io/docs): the language, the `orb` CLI and how the pieces fit
 
 ## License
 
