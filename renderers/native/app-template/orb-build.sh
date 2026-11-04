@@ -16,7 +16,7 @@ fi
 cargo "${args[@]}"
 
 mkdir -p "$stage_dir"
-cp "$script_dir/main.c" "$script_dir/OrbitalVideoOverlay.m" "$script_dir/project.yml" "$stage_dir/"
+cp "$script_dir/main.c" "$script_dir/OrbitalVideoOverlay.m" "$script_dir/OrbitalMotion.m" "$script_dir/project.yml" "$stage_dir/"
 cp "$ORB_GPU_PROGRAM" "$stage_dir/program.orb"
 cp "$ORB_GPU_LANGUAGE" "$stage_dir/language.json"
 (

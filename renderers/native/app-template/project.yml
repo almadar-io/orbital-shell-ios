@@ -7,6 +7,7 @@ targets:
     sources:
       - path: main.c
       - path: OrbitalVideoOverlay.m
+      - path: OrbitalMotion.m
       - path: program.orb
         buildPhase: resources
       - path: language.json
