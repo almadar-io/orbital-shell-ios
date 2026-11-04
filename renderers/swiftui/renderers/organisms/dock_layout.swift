@@ -73,6 +73,7 @@ struct DockLayoutOrganismView: View {
         let bottomShown = slot("bottomPanel") != nil && !collapsed("bottomPanelCollapsed", bottomLocal)
         let sidebarWidth = max(size.width * percent("sidebarWidth", 20), CGFloat(props.float("sidebarMinSize", default: 160)))
         let bottomHeight = max(size.height * percent("bottomPanelHeight", 30), CGFloat(props.float("bottomPanelMinSize", default: 120)))
+        let secondaryWidth = max(size.width * percent("secondarySidebarWidth", 25), CGFloat(props.float("secondarySidebarMinSize", default: 240)))
         return VStack(spacing: theme.density.spacing.space0) {
             HStack(spacing: theme.density.spacing.space0) {
                 if let rail = slot("rail") {
@@ -128,7 +129,7 @@ struct DockLayoutOrganismView: View {
                 if secondaryShown {
                     edge(true)
                     ScrollView { RenderChild(secondary, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
-                        .frame(width: CGFloat(props.float("secondarySidebarWidth", default: 280)))
+                        .frame(width: secondaryWidth)
                 }
             }
         }
