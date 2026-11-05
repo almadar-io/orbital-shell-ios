@@ -242,6 +242,50 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
             "struct {struct_name}: Codable {{\n{fields_out}\n    enum CodingKeys: String, CodingKey {{\n{keys_out}    }}\n}}\n\n"
         ));
     }
+    for t in &module.traits {
+        let knobs = t.config_fields();
+        if knobs.is_empty() {
+            continue;
+        }
+        let struct_name = format!("{}Config", sanitize_identifier(&t.name, &[]));
+        let hoisted = std::cell::RefCell::new(Vec::new());
+        let mut fields_out = String::new();
+        let mut keys_out = String::new();
+        for knob in &knobs {
+            let name = &knob.name;
+            let context = format!("{}{}", struct_name, split_to_pascal_case(name));
+            let ty = match knob.enum_values.as_ref().filter(|v| !v.is_empty()) {
+                Some(values) => {
+                    hoisted.borrow_mut().push(generate_enum(&context, values));
+                    OirType::Enum { name: context.clone() }
+                }
+                None => knob.field_type.clone(),
+            };
+            let (inner, optional) = ty.effective(true);
+            let swift_type = oir_type_to_swift_with(inner, &context, &hoisted);
+            let default = knob.default.as_ref().and_then(|v| match render_default(&SwiftLiteral, v, inner, None) {
+                Ok(rendered) => rendered,
+                Err(mismatch) => Some(format!("/* {} */", mismatch.marker())),
+            });
+            let ident = sanitize_identifier(&split_to_camel_case(name), SWIFT_KEYWORDS);
+            let (opt, value) = match default {
+                Some(d) => (if optional { "?" } else { "" }, d),
+                None => ("?", "nil".to_string()),
+            };
+            fields_out.push_str(&format!("    var {ident}: {swift_type}{opt} = {value}\n"));
+            keys_out.push_str(&format!(
+                "        case {ident} = \"{}\"\n",
+                escape_double_quoted(name)
+            ));
+        }
+        for decl in hoisted.into_inner() {
+            content.push_str(&decl);
+            content.push_str("\n\n");
+        }
+        content.push_str(&format!(
+            "struct {struct_name}: Codable {{\n{fields_out}\n    enum CodingKeys: String, CodingKey {{\n{keys_out}    }}\n}}\n\n"
+        ));
+    }
     GeneratedFile {
         path: "Events.swift".to_string(),
         content,
@@ -2097,6 +2141,33 @@ mod tests {
             "{content}"
         );
         assert!(content.contains("struct ChunkCHUNKEDPayload: Codable {\n    var count: Int\n"));
+    }
+
+    #[test]
+    fn a_trait_with_config_knobs_declares_one_codable_config_with_defaults() {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        let mut t = OirTrait::new("Game");
+        let knob = |ty| orbital_core_base::ir::OirConfigFieldType { field_type: ty, values: None };
+        let mut schema = orbital_core_base::ir::OirConfigSchema::new();
+        schema.insert("running".into(), knob(OirType::Boolean));
+        schema.insert("pointsPerKill".into(), knob(OirType::Number));
+        schema.insert("label".into(), knob(OirType::String));
+        t.declared_config_schema = Some(schema);
+        let mut defaults = orbital_core_base::ir::OirObject::new();
+        defaults.insert("running".into(), OirValue::Bool(true));
+        defaults.insert("pointsPerKill".into(), OirValue::Number(10.0));
+        t.declared_config_defaults = Some(defaults);
+        module.traits.push(t);
+        let content = events_swift(&module);
+        assert!(
+            content.contains("struct GameConfig: Codable {\n    var label: String? = nil\n    var pointsPerKill: Double = 10.0\n    var running: Bool = true\n\n    enum CodingKeys: String, CodingKey {\n        case label = \"label\"\n        case pointsPerKill = \"pointsPerKill\"\n        case running = \"running\"\n    }\n}"),
+            "{content}"
+        );
+    }
+
+    #[test]
+    fn control_a_trait_without_config_declares_no_config() {
+        assert!(!events_swift(&payload_module()).contains("ChunkConfig"));
     }
 
     #[test]
