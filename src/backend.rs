@@ -1552,11 +1552,10 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             return self.json();
         }
         let name = self.context_name.clone();
-        // A real discriminated union: an enum with associated values, one case
-        // per variant. Each variant's struct shape hoists as its own named
-        // struct (`{Name}{Variant}`); Swift synthesizes Codable for enums with
-        // associated values (Swift 5.5+).
-        let cases: Vec<String> = variants
+        // An enum with associated values, one case per variant. A struct arm
+        // hoists as its own named struct (`{Name}{Variant}`); a primitive or
+        // list arm is its own type. Codable is hand-written (see below).
+        let cases: Vec<(String, String)> = variants
             .iter()
             .map(|v| {
                 let case_name = sanitize_identifier(&split_to_camel_case(&v.name), SWIFT_KEYWORDS);
@@ -1601,18 +1600,32 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
                             variant_name,
                             parts.join("; ")
                         ));
-                        format!("case {}({})", case_name, variant_name)
+                        (case_name, variant_name)
                     }
-                    other => {
-                        format!("case {}({})", case_name, render_type(&child, other, None))
-                    }
+                    other => (case_name, render_type(&child, other, None)),
                 }
             })
             .collect();
+        // Untagged on the wire: a bare value decodes as the first arm that fits.
+        let decls: Vec<String> = cases
+            .iter()
+            .map(|(case, ty)| format!("case {case}({ty})"))
+            .collect();
+        let decodes: Vec<String> = cases
+            .iter()
+            .map(|(case, ty)| {
+                format!("        if let v = try? c.decode({ty}.self) {{ self = .{case}(v); return }}")
+            })
+            .collect();
+        let encodes: Vec<String> = cases
+            .iter()
+            .map(|(case, _)| format!("        case .{case}(let v): try c.encode(v)"))
+            .collect();
         self.hoisted.borrow_mut().push(format!(
-            "enum {}: Codable {{\n    {}\n}}",
-            name,
-            cases.join("\n    ")
+            "enum {name}: Codable {{\n    {}\n    init(from decoder: Decoder) throws {{\n        let c = try decoder.singleValueContainer()\n{}\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no {name} arm matches\")\n    }}\n    func encode(to encoder: Encoder) throws {{\n        var c = encoder.singleValueContainer()\n        switch self {{\n{}\n        }}\n    }}\n}}",
+            decls.join("\n    "),
+            decodes.join("\n"),
+            encodes.join("\n")
         ));
         name
     }
@@ -1785,6 +1798,9 @@ impl TargetLiteralRenderer for SwiftLiteral {
     }
     fn array(&self, items: Vec<String>) -> String {
         format!("[{}]", items.join(", "))
+    }
+    fn union_arm(&self, arm: &str, inner: String) -> String {
+        format!(".{}({inner})", sanitize_identifier(&split_to_camel_case(arm), SWIFT_KEYWORDS))
     }
 }
 
@@ -3096,9 +3112,31 @@ mod tests {
             vec![
                 "struct UserItemBook: Codable { var kind: String }",
                 "struct UserItemMovie: Codable { var kind: String }",
-                "enum UserItem: Codable {\n    case book(UserItemBook)\n    case movie(UserItemMovie)\n}",
+                "enum UserItem: Codable {\n    case book(UserItemBook)\n    case movie(UserItemMovie)\n    init(from decoder: Decoder) throws {\n        let c = try decoder.singleValueContainer()\n        if let v = try? c.decode(UserItemBook.self) { self = .book(v); return }\n        if let v = try? c.decode(UserItemMovie.self) { self = .movie(v); return }\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no UserItem arm matches\")\n    }\n    func encode(to encoder: Encoder) throws {\n        var c = encoder.singleValueContainer()\n        switch self {\n        case .book(let v): try c.encode(v)\n        case .movie(let v): try c.encode(v)\n        }\n    }\n}",
             ]
         );
+    }
+
+    #[test]
+    fn a_union_decodes_a_bare_primitive_arm_and_constructs_its_default() {
+        let env = OirType::Struct {
+            additional: None,
+            fields: vec![OirField::new("anchor", OirType::String)].into(),
+        };
+        let union_ty = OirType::Union {
+            variants: vec![OirField::new("string", OirType::String), OirField::new("Env", env)].into(),
+        };
+        let (ty, hoisted) = oir_type_to_swift_hoisted(&union_ty, "HolderHost");
+        assert_eq!(ty, "HolderHost");
+        assert_eq!(
+            hoisted,
+            vec![
+                "struct HolderHostEnv: Codable { var anchor: String }",
+                "enum HolderHost: Codable {\n    case string(String)\n    case Env(HolderHostEnv)\n    init(from decoder: Decoder) throws {\n        let c = try decoder.singleValueContainer()\n        if let v = try? c.decode(String.self) { self = .string(v); return }\n        if let v = try? c.decode(HolderHostEnv.self) { self = .Env(v); return }\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no HolderHost arm matches\")\n    }\n    func encode(to encoder: Encoder) throws {\n        var c = encoder.singleValueContainer()\n        switch self {\n        case .string(let v): try c.encode(v)\n        case .Env(let v): try c.encode(v)\n        }\n    }\n}",
+            ]
+        );
+        let default = render_default(&SwiftLiteral, &orbital_core_base::ir::OirValue::String("api.example.test".into()), &union_ty, None);
+        assert_eq!(default, Ok(Some(".string(\"api.example.test\")".to_string())));
     }
 
     #[test]
