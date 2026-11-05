@@ -2173,6 +2173,21 @@ mod tests {
     }
 
     #[test]
+    fn a_nullable_number_field_renders_one_optional() {
+        let mut entity = OirEntity::new("Rec");
+        entity.fields.push(OirField::optional("v", OirType::optional(OirType::Number)));
+        entity.fields.push({
+            let mut f = OirField::new("n", OirType::Number);
+            f.default = Some(OirValue::Number(1.0));
+            f
+        });
+        let content = generate_entity(&entity);
+        assert!(content.contains("var v: Double?\n"), "{content}");
+        assert!(!content.contains("Double??"), "{content}");
+        assert!(content.contains("var n: Double = 1"), "{content}");
+    }
+
+    #[test]
     fn test_entity_with_enum_and_defaults() {
         let mut entity = OirEntity::new("Task");
         entity.fields.push(OirField::new("title", OirType::String));
