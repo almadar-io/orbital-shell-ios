@@ -90,6 +90,7 @@ impl Backend for IosBackend {
             &module.distinct_entities(),
             &module.named_types,
         ));
+        files.push(generate_events_file(module));
         files.push(generate_services_file(&module.services));
         files.push(generate_api_client_file(module));
         files.push(generate_slot_role_file());
@@ -148,7 +149,7 @@ fn generate_entities_file(
     // shell's `emit_named_type_declarations`.
     let file_hoisted = std::cell::RefCell::new(Vec::new());
     for (name, ty) in named_types {
-        oir_type_to_swift_with(ty, name, &file_hoisted);
+        oir_type_to_swift_with(ty, &orbital_core_base::type_compat::type_identifier(name), &file_hoisted);
     }
     for decl in file_hoisted.into_inner() {
         content.push_str(&decl);
@@ -161,6 +162,88 @@ fn generate_entities_file(
 
     GeneratedFile {
         path: "Entities.swift".to_string(),
+        content,
+    }
+}
+
+/// A payload field's entity reference to an entity this module does not declare reads as raw JSON, as in the
+/// TypeScript shell (an imported atom's entity has no struct here).
+fn payload_type_local(ty: &OirType, local: &std::collections::BTreeSet<&str>) -> OirType {
+    match ty {
+        OirType::Row { entity } if !local.contains(entity.as_str()) => OirType::Node,
+        OirType::Array { inner } => OirType::Array {
+            inner: Box::new(payload_type_local(inner, local)),
+        },
+        OirType::Optional { inner } => OirType::Optional {
+            inner: Box::new(payload_type_local(inner, local)),
+        },
+        OirType::Map { key, value } => OirType::Map {
+            key: key.clone(),
+            value: Box::new(payload_type_local(value, local)),
+        },
+        other => other.clone(),
+    }
+}
+
+/// The payload structs of every event a trait declares or emits with a payload, named `<Trait><EVENT>Payload`
+/// as in the TypeScript shell, fields sorted by name.
+fn generate_events_file(module: &OirModule) -> GeneratedFile {
+    let mut content = String::from("import Foundation\n\n");
+    let local: std::collections::BTreeSet<&str> =
+        module.entities.iter().map(|e| e.name.as_str()).collect();
+    let mut payloads: std::collections::BTreeMap<String, Vec<(String, OirType)>> =
+        std::collections::BTreeMap::new();
+    for t in &module.traits {
+        for event in &t.events {
+            let Some(schema) = event.payload_schema.as_ref().filter(|s| !s.is_empty()) else {
+                continue;
+            };
+            let mut fields: Vec<(String, OirType)> = schema
+                .iter()
+                .map(|(k, v)| (k.clone(), payload_type_local(v, &local)))
+                .collect();
+            fields.sort_by(|a, b| a.0.cmp(&b.0));
+            payloads.insert(
+                format!(
+                    "{}{}Payload",
+                    sanitize_identifier(&t.name, &[]),
+                    sanitize_identifier(&event.key, &[])
+                ),
+                fields,
+            );
+        }
+    }
+    for (struct_name, fields) in payloads {
+        let hoisted = std::cell::RefCell::new(Vec::new());
+        let mut fields_out = String::new();
+        let mut keys_out = String::new();
+        for (name, ty) in &fields {
+            let (inner, optional) = ty.effective(true);
+            let swift_type = oir_type_to_swift_with(
+                inner,
+                &format!("{}{}", struct_name, split_to_pascal_case(name)),
+                &hoisted,
+            );
+            let ident = sanitize_identifier(&split_to_camel_case(name), SWIFT_KEYWORDS);
+            fields_out.push_str(&format!(
+                "    var {ident}: {swift_type}{}\n",
+                if optional { "?" } else { "" }
+            ));
+            keys_out.push_str(&format!(
+                "        case {ident} = \"{}\"\n",
+                escape_double_quoted(name)
+            ));
+        }
+        for decl in hoisted.into_inner() {
+            content.push_str(&decl);
+            content.push_str("\n\n");
+        }
+        content.push_str(&format!(
+            "struct {struct_name}: Codable {{\n{fields_out}\n    enum CodingKeys: String, CodingKey {{\n{keys_out}    }}\n}}\n\n"
+        ));
+    }
+    GeneratedFile {
+        path: "Events.swift".to_string(),
         content,
     }
 }
@@ -279,8 +362,8 @@ fn generate_entity(entity: &OirEntity) -> String {
 
         let opt = if optional { "?" } else { "" };
         let decl = match &default {
-            Some(d) => format!("    let {}: {}{} = {}", field_name, swift_type, opt, d),
-            None => format!("    let {}: {}{}", field_name, swift_type, opt),
+            Some(d) => format!("    var {}: {}{} = {}", field_name, swift_type, opt, d),
+            None => format!("    var {}: {}{}", field_name, swift_type, opt),
         };
         fields_out.push_str(&decl);
         fields_out.push('\n');
@@ -300,7 +383,7 @@ fn generate_entity(entity: &OirEntity) -> String {
     out.push_str("struct ");
     out.push_str(&class_name);
     out.push_str(": Codable {\n");
-    out.push_str("    let id: String\n");
+    out.push_str("    var id: String\n");
     out.push_str(&fields_out);
 
     out.push_str("\n    enum CodingKeys: String, CodingKey {\n");
@@ -1379,7 +1462,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
         // `OirModule::named_types` (resolver-registered recursive aliases AND
         // Phase-3D nominalized anonymous shapes) — the field references it by
         // bare name, mirroring the TS shell (types.rs `type_ref`).
-        name.to_string()
+        orbital_core_base::type_compat::type_identifier(name)
     }
     fn row(&self, entity: &str) -> String {
         swift_entity_type(entity)
@@ -1406,7 +1489,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
                 let t = render_type(&child, effective_ty, f.enum_values.as_deref());
                 let opt = if optional { "?" } else { "" };
                 format!(
-                    "let {}: {}{}",
+                    "var {}: {}{}",
                     sanitize_identifier(&split_to_camel_case(&f.name), SWIFT_KEYWORDS),
                     t,
                     opt
@@ -1459,7 +1542,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
                                 );
                                 let opt = if optional { "?" } else { "" };
                                 format!(
-                                    "let {}: {}{}",
+                                    "var {}: {}{}",
                                     sanitize_identifier(
                                         &split_to_camel_case(&f.name),
                                         SWIFT_KEYWORDS
@@ -1926,6 +2009,34 @@ mod tests {
             .unwrap_or_default()
     }
 
+    fn holder_module(alias: &str) -> OirModule {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        module.named_types.insert(
+            alias.to_string(),
+            OirType::Struct { additional: None, fields: vec![OirField::new("id", OirType::String)].into() },
+        );
+        let mut holder = OirEntity::new("Holder");
+        holder.fields.push(OirField::new("claim", OirType::TypeRef { name: alias.to_string() }));
+        module.entities.push(holder);
+        module
+    }
+
+    #[test]
+    fn a_behavior_qualified_alias_is_one_identifier_at_declaration_and_reference() {
+        let content = entities_file(&holder_module("std-foo::Bar"));
+        assert!(content.contains("struct StdFooBar:"), "{content}");
+        assert!(content.contains(": StdFooBar"), "{content}");
+        assert!(!content.contains("::"), "{content}");
+    }
+
+    #[test]
+    fn control_an_unqualified_alias_is_spelled_as_written() {
+        let content = entities_file(&holder_module("Bar"));
+        assert!(content.contains("struct Bar:"), "{content}");
+        assert!(content.contains(": Bar"), "{content}");
+        assert!(!content.contains("StdFoo"), "{content}");
+    }
+
     #[test]
     fn test_entities_declared_once_when_module_carries_same_named_clones() {
         let mut module = OirModule::new("TestApp", "1.0.0");
@@ -1942,6 +2053,58 @@ mod tests {
         let content = entities_file(&module);
         assert_eq!(content.matches("struct User:").count(), 1);
         assert!(content.contains("struct UserProfile"));
+    }
+
+    fn payload_module() -> OirModule {
+        use orbital_core_base::ir::{OirEvent, OirTrait, OirTypeMap};
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        let mut t = OirTrait::new("Chunk");
+        let mut listened = OirEvent::new("CHUNK");
+        let mut schema = OirTypeMap::new();
+        schema.insert("text".into(), OirType::String);
+        schema.insert("size".into(), OirType::Number);
+        schema.insert(
+            "note".into(),
+            OirType::Optional {
+                inner: Box::new(OirType::String),
+            },
+        );
+        listened.payload_schema = Some(schema);
+        let mut emitted = OirEvent::new("CHUNKED");
+        let mut schema = OirTypeMap::new();
+        schema.insert("count".into(), OirType::Integer);
+        emitted.payload_schema = Some(schema);
+        t.events = vec![listened, emitted, OirEvent::new("RESET")];
+        module.traits.push(t);
+        module
+    }
+
+    fn events_swift(module: &OirModule) -> String {
+        IosBackend::new()
+            .generate(module)
+            .files
+            .into_iter()
+            .find(|f| f.path == "Events.swift")
+            .map(|f| f.content)
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn events_file_declares_one_codable_payload_per_event_with_sorted_mutable_fields() {
+        let content = events_swift(&payload_module());
+        assert!(
+            content.contains("struct ChunkCHUNKPayload: Codable {\n    var note: String?\n    var size: Double\n    var text: String\n\n    enum CodingKeys: String, CodingKey {\n        case note = \"note\"\n        case size = \"size\"\n        case text = \"text\"\n    }\n}"),
+            "{content}"
+        );
+        assert!(content.contains("struct ChunkCHUNKEDPayload: Codable {\n    var count: Int\n"));
+    }
+
+    #[test]
+    fn control_a_void_event_and_a_traitless_module_declare_no_payload_and_no_let_field() {
+        let content = events_swift(&payload_module());
+        assert!(!content.contains("RESET"));
+        assert!(!content.contains("    let "));
+        assert!(!events_swift(&OirModule::new("TestApp", "1.0.0")).contains("struct "));
     }
 
     #[test]
@@ -2038,8 +2201,8 @@ mod tests {
         assert!(content.contains("enum TaskEntityPriority: String, Codable"));
         assert!(content.contains("case low = \"low\""));
         assert!(content.contains("case high = \"high\""));
-        assert!(content.contains("let completed: Bool = false"));
-        assert!(content.contains("let tags: [String]?"));
+        assert!(content.contains("var completed: Bool = false"));
+        assert!(content.contains("var tags: [String]?"));
     }
 
     /// The API client's ONLY remaining job is posting a kernel-produced
@@ -2578,8 +2741,8 @@ mod tests {
         });
 
         let content = generate_entity(&entity);
-        assert!(content.contains("let customer: String"));
-        assert!(content.contains("let backupCustomer: String?"));
+        assert!(content.contains("var customer: String"));
+        assert!(content.contains("var backupCustomer: String?"));
     }
 
     /// Coverage gate: the EffectHandlers `switch` must handle every client-effect kind the kernel
@@ -2817,7 +2980,7 @@ mod tests {
         assert_eq!(ty, "UserProfile");
         assert_eq!(
             hoisted,
-            vec!["struct UserProfile: Codable { let userId: String; let nickName: String? }"]
+            vec!["struct UserProfile: Codable { var userId: String; var nickName: String? }"]
         );
 
         // Union: a named Codable enum with associated values; each variant's
@@ -2845,8 +3008,8 @@ mod tests {
         assert_eq!(
             hoisted,
             vec![
-                "struct UserItemBook: Codable { let kind: String }",
-                "struct UserItemMovie: Codable { let kind: String }",
+                "struct UserItemBook: Codable { var kind: String }",
+                "struct UserItemMovie: Codable { var kind: String }",
                 "enum UserItem: Codable {\n    case book(UserItemBook)\n    case movie(UserItemMovie)\n}",
             ]
         );
@@ -2865,10 +3028,10 @@ mod tests {
         ));
         let content = generate_entity(&entity);
         assert!(
-            content.contains("let revisions: [NoteRevision]"),
+            content.contains("var revisions: [NoteRevision]"),
             "{content}"
         );
-        assert!(content.contains("let tagIds: [String]"), "{content}");
+        assert!(content.contains("var tagIds: [String]"), "{content}");
         assert_eq!(
             classify_oir_type(&OirType::row("NoteRevision")),
             TypeMappingClass::Faithful
@@ -2892,7 +3055,7 @@ mod tests {
         board
             .fields
             .push(OirField::new("tasks", OirType::array(OirType::row("Task"))));
-        assert!(generate_entity(&board).contains("let tasks: [TaskEntity]"));
+        assert!(generate_entity(&board).contains("var tasks: [TaskEntity]"));
     }
 
     #[test]
@@ -2930,7 +3093,7 @@ mod tests {
         let (_, hoisted) = oir_type_to_swift_hoisted(&struct_ty, "UserProfile");
         assert_eq!(
             hoisted,
-            vec!["struct UserProfile: Codable { let nickName: String? }"]
+            vec!["struct UserProfile: Codable { var nickName: String? }"]
         );
     }
 
@@ -2945,7 +3108,7 @@ mod tests {
         });
 
         let content = generate_entity(&entity);
-        assert!(content.contains("let priority: TaskEntityPriority = TaskEntityPriority.low"));
+        assert!(content.contains("var priority: TaskEntityPriority = TaskEntityPriority.low"));
     }
 
     #[test]
@@ -2963,10 +3126,10 @@ mod tests {
         });
 
         let content = generate_entity(&entity);
-        assert!(content.contains("let quantity: Int = 3"));
+        assert!(content.contains("var quantity: Int = 3"));
         // Swift Double literal: a whole number still prints `.0`, never the
         // Int-looking `100`.
-        assert!(content.contains("let price: Double = 100.0"));
+        assert!(content.contains("var price: Double = 100.0"));
     }
 
     #[test]
@@ -2982,7 +3145,7 @@ mod tests {
         });
 
         let content = generate_entity(&entity);
-        assert!(content.contains("let counts: [Int] = [1, 2]"));
+        assert!(content.contains("var counts: [Int] = [1, 2]"));
     }
 
     /// A field default whose `OirValue` kind cannot possibly inhabit its
