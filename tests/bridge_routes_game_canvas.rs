@@ -6,10 +6,13 @@
 //! Also exercises the headless RGBA path from orbital-canvas via the Rust
 //! c_api (no device/Metal needed on Linux CI — graceful skip when no adapter).
 
-use orbital_canvas::{Canvas, packet::{DrawCommand, GameRenderPacket, Rect}};
-use orbital_shell_ios::IosBackend;
+use orbital_canvas::{
+    packet::{DrawCommand, GameRenderPacket, Rect},
+    Canvas,
+};
 use orbital_core_base::generate::Backend;
 use orbital_core_base::ir::OirModule;
+use orbital_shell_ios::IosBackend;
 
 /// All canvas-family pattern names that must be routed to the GPU renderer.
 const CANVAS_PATTERNS: &[&str] = &["canvas", "game-canvas", "game-canvas-2d"];
@@ -99,8 +102,14 @@ fn bridge_swift_declares_silgen_name_symbols() {
     }
 
     // The coordinator must use MTKView and MTKViewDelegate.
-    assert!(bridge_src.contains("MTKViewDelegate"), "bridge missing MTKViewDelegate conformance");
-    assert!(bridge_src.contains("attach(to view: MTKView"), "bridge missing attach(to:) method");
+    assert!(
+        bridge_src.contains("MTKViewDelegate"),
+        "bridge missing MTKViewDelegate conformance"
+    );
+    assert!(
+        bridge_src.contains("attach(to view: MTKView"),
+        "bridge missing attach(to:) method"
+    );
 }
 
 // --------------------------------------------------------------------------
@@ -138,7 +147,7 @@ fn backend_emits_bridge_files() {
 fn headless_rgba_non_blank_or_no_adapter() {
     let mut renderer = match Canvas::new_headless() {
         Ok(r) => r,
-        Err(_) => return,  // no adapter on this CI host — skip
+        Err(_) => return, // no adapter on this CI host — skip
     };
 
     let packet = GameRenderPacket {
@@ -146,9 +155,16 @@ fn headless_rgba_non_blank_or_no_adapter() {
         width: 32.0,
         height: 32.0,
         draw_commands: vec![
-            DrawCommand::Clear { color: [0.2, 0.4, 0.8, 1.0] },
+            DrawCommand::Clear {
+                color: [0.2, 0.4, 0.8, 1.0],
+            },
             DrawCommand::Quad {
-                rect: Rect { x: 4.0, y: 4.0, w: 24.0, h: 24.0 },
+                rect: Rect {
+                    x: 4.0,
+                    y: 4.0,
+                    w: 24.0,
+                    h: 24.0,
+                },
                 color: [1.0, 1.0, 0.0, 1.0],
             },
         ],
@@ -157,12 +173,15 @@ fn headless_rgba_non_blank_or_no_adapter() {
 
     let rgba = match renderer.render_packet_to_rgba(&packet) {
         Ok(buf) => buf,
-        Err(_) => return,  // no GPU available — skip gracefully
+        Err(_) => return, // no GPU available — skip gracefully
     };
 
     assert_eq!(rgba.len(), 32 * 32 * 4, "RGBA buffer length mismatch");
     let all_zero = rgba.iter().all(|&b| b == 0);
-    assert!(!all_zero, "headless RGBA buffer is entirely blank — renderer produced no output");
+    assert!(
+        !all_zero,
+        "headless RGBA buffer is entirely blank — renderer produced no output"
+    );
 }
 
 // --------------------------------------------------------------------------
@@ -196,18 +215,44 @@ fn canvas_host_sends_scene_not_raw_props_as_packet() {
 #[test]
 fn the_canvas_display_link_stops_for_a_static_scene_and_reads_the_host_clock() {
     let src = include_str!("../renderers/swiftui/renderers/bridge/OrbitalGameBridge.swift");
-    let draw = src.split("func draw(in view: MTKView)").nth(1).expect("draw(in:)");
+    let draw = src
+        .split("func draw(in view: MTKView)")
+        .nth(1)
+        .expect("draw(in:)");
     let draw = draw.split("\n    }\n").next().unwrap();
-    let clock = draw.find("orbital_canvas_set_clock(h, CACurrentMediaTime()").expect("clock before render");
+    let clock = draw
+        .find("orbital_canvas_set_clock(h, CACurrentMediaTime()")
+        .expect("clock before render");
+    let epoch = draw
+        .find("orbital_canvas_set_epoch_clock(h, Date().timeIntervalSince1970")
+        .expect("epoch clock before render");
     let render = draw.find("orbital_canvas_render(h)").expect("render");
-    let ask = draw.find("orbital_canvas_wants_frames(h) == 0").expect("frame request check");
-    assert!(clock < render && render < ask, "clock, then render, then the wants-frames check");
-    assert!(draw.contains("idle(view)"), "a static scene pauses the MTKView");
-    assert!(src.contains("view?.isPaused = false"), "a new scene, touch or resize wakes it");
-    assert!(src.contains("enableSetNeedsDisplay = true"), "paused views redraw only on demand");
+    let ask = draw
+        .find("orbital_canvas_wants_frames(h) == 0")
+        .expect("frame request check");
+    assert!(
+        clock < epoch && epoch < render && render < ask,
+        "both clocks, then render, then the wants-frames check"
+    );
+    assert!(
+        draw.contains("idle(view)"),
+        "a static scene pauses the MTKView"
+    );
+    assert!(
+        src.contains("view?.isPaused = false"),
+        "a new scene, touch or resize wakes it"
+    );
+    assert!(
+        src.contains("enableSetNeedsDisplay = true"),
+        "paused views redraw only on demand"
+    );
     assert!(
         src.contains("UIAccessibility.isReduceMotionEnabled ? 0 : 1"),
         "the OS reduced-motion setting reaches the renderer"
     );
-    assert_eq!(src.matches("CADisplayLink").count(), 0, "no second loop: MTKView's own display link is the clock");
+    assert_eq!(
+        src.matches("CADisplayLink").count(),
+        0,
+        "no second loop: MTKView's own display link is the clock"
+    );
 }

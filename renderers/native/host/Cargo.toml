@@ -1,0 +1,18 @@
+[package]
+name = "orbital-shell-ios-native-host"
+version = "18.0.0"
+edition = "2021"
+license = "BUSL-1.1"
+repository = "https://github.com/almadar-io/orbital-shell-ios"
+description = "iOS app entry and static link adapter for the native GPU renderer."
+
+[lib]
+crate-type = ["staticlib"]
+
+[features]
+default = []
+research-video = ["orbital-client-dioxus/research-video"]
+
+[dependencies]
+orbital-client-dioxus = { git = "https://github.com/almadar-io/orbital-shell-rust", branch = "main", features = ["native"] }
+orbital-core = { git = "https://github.com/almadar-io/orbital-core", branch = "main" }
