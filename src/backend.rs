@@ -1566,7 +1566,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
         let cases: Vec<(String, String)> = variants
             .iter()
             .map(|v| {
-                let case_name = sanitize_identifier(&split_to_camel_case(&v.name), SWIFT_KEYWORDS);
+                let case_name = sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(&v.name), SWIFT_KEYWORDS);
                 let variant_name = format!("{}{}", name, split_to_pascal_case(&v.name));
                 let child = SwiftRenderer {
                     context_name: variant_name.clone(),
@@ -1808,7 +1808,7 @@ impl TargetLiteralRenderer for SwiftLiteral {
         format!("[{}]", items.join(", "))
     }
     fn union_arm(&self, arm: &str, inner: String) -> String {
-        format!(".{}({inner})", sanitize_identifier(&split_to_camel_case(arm), SWIFT_KEYWORDS))
+        format!(".{}({inner})", sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(arm), SWIFT_KEYWORDS))
     }
 }
 
@@ -3142,7 +3142,7 @@ mod tests {
             hoisted,
             vec![
                 "struct HolderHostEnv: Codable { var anchor: String }",
-                "enum HolderHost: Codable {\n    case string(String)\n    case Env(HolderHostEnv)\n    init(from decoder: Decoder) throws {\n        let c = try decoder.singleValueContainer()\n        if let v = try? c.decode(String.self) { self = .string(v); return }\n        if let v = try? c.decode(HolderHostEnv.self) { self = .Env(v); return }\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no HolderHost arm matches\")\n    }\n    func encode(to encoder: Encoder) throws {\n        var c = encoder.singleValueContainer()\n        switch self {\n        case .string(let v): try c.encode(v)\n        case .Env(let v): try c.encode(v)\n        }\n    }\n}",
+                "enum HolderHost: Codable {\n    case string(String)\n    case env(HolderHostEnv)\n    init(from decoder: Decoder) throws {\n        let c = try decoder.singleValueContainer()\n        if let v = try? c.decode(String.self) { self = .string(v); return }\n        if let v = try? c.decode(HolderHostEnv.self) { self = .env(v); return }\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no HolderHost arm matches\")\n    }\n    func encode(to encoder: Encoder) throws {\n        var c = encoder.singleValueContainer()\n        switch self {\n        case .string(let v): try c.encode(v)\n        case .env(let v): try c.encode(v)\n        }\n    }\n}",
             ]
         );
         let default = render_default(&SwiftLiteral, &orbital_core_base::ir::OirValue::String("api.example.test".into()), &union_ty, None);
@@ -4195,5 +4195,18 @@ mod tests {
         assert!(content.contains("enum ChunkCHUNKPayloadKind: String, Codable {"), "{content}");
         assert!(content.contains("    var kind: ChunkCHUNKPayloadKind\n"), "{content}");
         assert!(!content.contains("\"a\" | \"b\""), "the literal text is never a type: {content}");
+    }
+
+    #[test]
+    fn a_union_case_named_like_its_arm_model_does_not_shadow_the_model() {
+        let hoisted = std::cell::RefCell::new(Vec::new());
+        let union = OirType::Union {
+            variants: vec![OirField::new("MatchedText", OirType::TypeRef { name: "MatchedText".into() })].into(),
+        };
+        oir_type_to_swift_with(&union, "Matched", &hoisted);
+        let decl = hoisted.into_inner().join("\n");
+        assert!(decl.contains("case matchedText(MatchedText)"), "{decl}");
+        assert!(decl.contains("c.decode(MatchedText.self)"), "the decoder names the model, which no case shadows: {decl}");
+        assert!(!decl.contains("case MatchedText("), "{decl}");
     }
 }
