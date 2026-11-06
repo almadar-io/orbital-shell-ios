@@ -123,6 +123,7 @@ struct KernelEventRequest: Codable {
     var route: String? = nil
     var residence: KernelLegResidence? = nil
     var framesSince: UInt64? = nil
+    var heldPayload: UInt64? = nil
 }
 
 struct KernelEventResponse: Codable {
