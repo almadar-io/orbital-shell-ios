@@ -191,18 +191,18 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
     let mut content = String::from("import Foundation\n\n");
     let local: std::collections::BTreeSet<&str> =
         module.entities.iter().map(|e| e.name.as_str()).collect();
-    let mut payloads: std::collections::BTreeMap<String, Vec<(String, OirType)>> =
+    let mut payloads: std::collections::BTreeMap<String, Vec<(String, OirType, bool)>> =
         std::collections::BTreeMap::new();
     for t in &module.traits {
         for event in &t.events {
-            let Some(schema) = event.payload_schema.as_ref().filter(|s| !s.is_empty()) else {
-                continue;
-            };
-            let mut fields: Vec<(String, OirType)> = schema
-                .iter()
-                .map(|(k, v)| (k.clone(), payload_type_local(v, &local)))
+            let fields: Vec<(String, OirType, bool)> = event
+                .payload_fields()
+                .into_iter()
+                .map(|f| (f.name, payload_type_local(&f.field_type, &local), f.required))
                 .collect();
-            fields.sort_by(|a, b| a.0.cmp(&b.0));
+            if fields.is_empty() {
+                continue;
+            }
             payloads.insert(
                 format!(
                     "{}{}Payload",
@@ -217,8 +217,8 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
         let hoisted = std::cell::RefCell::new(Vec::new());
         let mut fields_out = String::new();
         let mut keys_out = String::new();
-        for (name, ty) in &fields {
-            let (inner, optional) = ty.effective(true);
+        for (name, ty, required) in &fields {
+            let (inner, optional) = ty.effective(*required);
             let swift_type = oir_type_to_swift_with(
                 inner,
                 &format!("{}{}", struct_name, split_to_pascal_case(name)),
@@ -2130,10 +2130,12 @@ mod tests {
             },
         );
         listened.payload_schema = Some(schema);
+        listened.payload_required_fields = ["text", "size"].into_iter().map(String::from).collect();
         let mut emitted = OirEvent::new("CHUNKED");
         let mut schema = OirTypeMap::new();
         schema.insert("count".into(), OirType::Integer);
         emitted.payload_schema = Some(schema);
+        emitted.payload_required_fields = ["count"].into_iter().map(String::from).collect();
         t.events = vec![listened, emitted, OirEvent::new("RESET")];
         module.traits.push(t);
         module
@@ -4161,5 +4163,14 @@ mod tests {
         assert!(app.contains(".onDisappear { viewModel.setTraitOnScreen(name, false) }"));
         let vm = generate_view_model_file(&module).content;
         assert!(vm.contains("kernel?.setTraitOnScreen(traitName, onScreen)"));
+    }
+
+    #[test]
+    fn a_payload_key_not_marked_required_renders_an_optional() {
+        let mut module = payload_module();
+        module.traits[0].events[0].payload_required_fields.remove("size");
+        let content = events_swift(&module);
+        assert!(content.contains("    var size: Double?\n"), "{content}");
+        assert!(content.contains("    var text: String\n"), "control: a `!` key stays required: {content}");
     }
 }
