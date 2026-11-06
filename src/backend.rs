@@ -191,18 +191,18 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
     let mut content = String::from("import Foundation\n\n");
     let local: std::collections::BTreeSet<&str> =
         module.entities.iter().map(|e| e.name.as_str()).collect();
-    let mut payloads: std::collections::BTreeMap<String, Vec<(String, OirType)>> =
+    let mut payloads: std::collections::BTreeMap<String, Vec<(String, OirType, bool)>> =
         std::collections::BTreeMap::new();
     for t in &module.traits {
         for event in &t.events {
-            let Some(schema) = event.payload_schema.as_ref().filter(|s| !s.is_empty()) else {
-                continue;
-            };
-            let mut fields: Vec<(String, OirType)> = schema
-                .iter()
-                .map(|(k, v)| (k.clone(), payload_type_local(v, &local)))
+            let fields: Vec<(String, OirType, bool)> = event
+                .payload_fields()
+                .into_iter()
+                .map(|f| (f.name, payload_type_local(&f.field_type, &local), f.required))
                 .collect();
-            fields.sort_by(|a, b| a.0.cmp(&b.0));
+            if fields.is_empty() {
+                continue;
+            }
             payloads.insert(
                 format!(
                     "{}{}Payload",
@@ -217,8 +217,8 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
         let hoisted = std::cell::RefCell::new(Vec::new());
         let mut fields_out = String::new();
         let mut keys_out = String::new();
-        for (name, ty) in &fields {
-            let (inner, optional) = ty.effective(true);
+        for (name, ty, required) in &fields {
+            let (inner, optional) = ty.effective(*required);
             let swift_type = oir_type_to_swift_with(
                 inner,
                 &format!("{}{}", struct_name, split_to_pascal_case(name)),
@@ -1493,7 +1493,15 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
         "AnyCodable".to_string()
     }
     fn enum_ty(&self, name: &str, _enum_values: Option<&[String]>) -> String {
-        split_to_pascal_case(name)
+        let Some(members) = orbital_core_base::type_compat::literal_union_members(name) else {
+            return split_to_pascal_case(name);
+        };
+        let decl = generate_enum(&self.context_name, &members).trim_end().to_string();
+        let mut hoisted = self.hoisted.borrow_mut();
+        if !hoisted.contains(&decl) {
+            hoisted.push(decl);
+        }
+        self.context_name.clone()
     }
     fn trait_ref(&self) -> String {
         "String".to_string()
@@ -1552,14 +1560,13 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             return self.json();
         }
         let name = self.context_name.clone();
-        // A real discriminated union: an enum with associated values, one case
-        // per variant. Each variant's struct shape hoists as its own named
-        // struct (`{Name}{Variant}`); Swift synthesizes Codable for enums with
-        // associated values (Swift 5.5+).
-        let cases: Vec<String> = variants
+        // An enum with associated values, one case per variant. A struct arm
+        // hoists as its own named struct (`{Name}{Variant}`); a primitive or
+        // list arm is its own type. Codable is hand-written (see below).
+        let cases: Vec<(String, String)> = variants
             .iter()
             .map(|v| {
-                let case_name = sanitize_identifier(&split_to_camel_case(&v.name), SWIFT_KEYWORDS);
+                let case_name = sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(&v.name), SWIFT_KEYWORDS);
                 let variant_name = format!("{}{}", name, split_to_pascal_case(&v.name));
                 let child = SwiftRenderer {
                     context_name: variant_name.clone(),
@@ -1601,18 +1608,32 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
                             variant_name,
                             parts.join("; ")
                         ));
-                        format!("case {}({})", case_name, variant_name)
+                        (case_name, variant_name)
                     }
-                    other => {
-                        format!("case {}({})", case_name, render_type(&child, other, None))
-                    }
+                    other => (case_name, render_type(&child, other, None)),
                 }
             })
             .collect();
+        // Untagged on the wire: a bare value decodes as the first arm that fits.
+        let decls: Vec<String> = cases
+            .iter()
+            .map(|(case, ty)| format!("case {case}({ty})"))
+            .collect();
+        let decodes: Vec<String> = cases
+            .iter()
+            .map(|(case, ty)| {
+                format!("        if let v = try? c.decode({ty}.self) {{ self = .{case}(v); return }}")
+            })
+            .collect();
+        let encodes: Vec<String> = cases
+            .iter()
+            .map(|(case, _)| format!("        case .{case}(let v): try c.encode(v)"))
+            .collect();
         self.hoisted.borrow_mut().push(format!(
-            "enum {}: Codable {{\n    {}\n}}",
-            name,
-            cases.join("\n    ")
+            "enum {name}: Codable {{\n    {}\n    init(from decoder: Decoder) throws {{\n        let c = try decoder.singleValueContainer()\n{}\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no {name} arm matches\")\n    }}\n    func encode(to encoder: Encoder) throws {{\n        var c = encoder.singleValueContainer()\n        switch self {{\n{}\n        }}\n    }}\n}}",
+            decls.join("\n    "),
+            decodes.join("\n"),
+            encodes.join("\n")
         ));
         name
     }
@@ -1785,6 +1806,9 @@ impl TargetLiteralRenderer for SwiftLiteral {
     }
     fn array(&self, items: Vec<String>) -> String {
         format!("[{}]", items.join(", "))
+    }
+    fn union_arm(&self, arm: &str, inner: String) -> String {
+        format!(".{}({inner})", sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(arm), SWIFT_KEYWORDS))
     }
 }
 
@@ -2114,10 +2138,12 @@ mod tests {
             },
         );
         listened.payload_schema = Some(schema);
+        listened.payload_required_fields = ["text", "size"].into_iter().map(String::from).collect();
         let mut emitted = OirEvent::new("CHUNKED");
         let mut schema = OirTypeMap::new();
         schema.insert("count".into(), OirType::Integer);
         emitted.payload_schema = Some(schema);
+        emitted.payload_required_fields = ["count"].into_iter().map(String::from).collect();
         t.events = vec![listened, emitted, OirEvent::new("RESET")];
         module.traits.push(t);
         module
@@ -3096,9 +3122,31 @@ mod tests {
             vec![
                 "struct UserItemBook: Codable { var kind: String }",
                 "struct UserItemMovie: Codable { var kind: String }",
-                "enum UserItem: Codable {\n    case book(UserItemBook)\n    case movie(UserItemMovie)\n}",
+                "enum UserItem: Codable {\n    case book(UserItemBook)\n    case movie(UserItemMovie)\n    init(from decoder: Decoder) throws {\n        let c = try decoder.singleValueContainer()\n        if let v = try? c.decode(UserItemBook.self) { self = .book(v); return }\n        if let v = try? c.decode(UserItemMovie.self) { self = .movie(v); return }\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no UserItem arm matches\")\n    }\n    func encode(to encoder: Encoder) throws {\n        var c = encoder.singleValueContainer()\n        switch self {\n        case .book(let v): try c.encode(v)\n        case .movie(let v): try c.encode(v)\n        }\n    }\n}",
             ]
         );
+    }
+
+    #[test]
+    fn a_union_decodes_a_bare_primitive_arm_and_constructs_its_default() {
+        let env = OirType::Struct {
+            additional: None,
+            fields: vec![OirField::new("anchor", OirType::String)].into(),
+        };
+        let union_ty = OirType::Union {
+            variants: vec![OirField::new("string", OirType::String), OirField::new("Env", env)].into(),
+        };
+        let (ty, hoisted) = oir_type_to_swift_hoisted(&union_ty, "HolderHost");
+        assert_eq!(ty, "HolderHost");
+        assert_eq!(
+            hoisted,
+            vec![
+                "struct HolderHostEnv: Codable { var anchor: String }",
+                "enum HolderHost: Codable {\n    case string(String)\n    case env(HolderHostEnv)\n    init(from decoder: Decoder) throws {\n        let c = try decoder.singleValueContainer()\n        if let v = try? c.decode(String.self) { self = .string(v); return }\n        if let v = try? c.decode(HolderHostEnv.self) { self = .env(v); return }\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no HolderHost arm matches\")\n    }\n    func encode(to encoder: Encoder) throws {\n        var c = encoder.singleValueContainer()\n        switch self {\n        case .string(let v): try c.encode(v)\n        case .env(let v): try c.encode(v)\n        }\n    }\n}",
+            ]
+        );
+        let default = render_default(&SwiftLiteral, &orbital_core_base::ir::OirValue::String("api.example.test".into()), &union_ty, None);
+        assert_eq!(default, Ok(Some(".string(\"api.example.test\")".to_string())));
     }
 
     #[test]
@@ -4123,5 +4171,42 @@ mod tests {
         assert!(app.contains(".onDisappear { viewModel.setTraitOnScreen(name, false) }"));
         let vm = generate_view_model_file(&module).content;
         assert!(vm.contains("kernel?.setTraitOnScreen(traitName, onScreen)"));
+    }
+
+    #[test]
+    fn a_payload_key_not_marked_required_renders_an_optional() {
+        let mut module = payload_module();
+        module.traits[0].events[0].payload_required_fields.remove("size");
+        let content = events_swift(&module);
+        assert!(content.contains("    var size: Double?\n"), "{content}");
+        assert!(content.contains("    var text: String\n"), "control: a `!` key stays required: {content}");
+    }
+
+    #[test]
+    fn a_literal_union_payload_field_hoists_a_context_named_enum_not_the_literal_text() {
+        let mut module = payload_module();
+        module.traits[0].events[0]
+            .payload_schema
+            .as_mut()
+            .expect("CHUNK payload")
+            .insert("kind".into(), OirType::Enum { name: "\"a\" | \"b\"".into() });
+        module.traits[0].events[0].payload_required_fields.insert("kind".into());
+        let content = events_swift(&module);
+        assert!(content.contains("enum ChunkCHUNKPayloadKind: String, Codable {"), "{content}");
+        assert!(content.contains("    var kind: ChunkCHUNKPayloadKind\n"), "{content}");
+        assert!(!content.contains("\"a\" | \"b\""), "the literal text is never a type: {content}");
+    }
+
+    #[test]
+    fn a_union_case_named_like_its_arm_model_does_not_shadow_the_model() {
+        let hoisted = std::cell::RefCell::new(Vec::new());
+        let union = OirType::Union {
+            variants: vec![OirField::new("MatchedText", OirType::TypeRef { name: "MatchedText".into() })].into(),
+        };
+        oir_type_to_swift_with(&union, "Matched", &hoisted);
+        let decl = hoisted.into_inner().join("\n");
+        assert!(decl.contains("case matchedText(MatchedText)"), "{decl}");
+        assert!(decl.contains("c.decode(MatchedText.self)"), "the decoder names the model, which no case shadows: {decl}");
+        assert!(!decl.contains("case MatchedText("), "{decl}");
     }
 }
