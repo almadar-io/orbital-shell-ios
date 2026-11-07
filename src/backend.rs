@@ -1802,6 +1802,9 @@ impl TargetLiteralRenderer for SwiftLiteral {
             n.to_string()
         }
     }
+    fn node_text(&self, s: &str) -> Option<String> {
+        Some(format!("AnyCodable.string(\"{}\")", escape_double_quoted(s)))
+    }
     fn string(&self, s: &str) -> String {
         format!("\"{}\"", escape_double_quoted(s))
     }
@@ -1888,6 +1891,15 @@ mod tests {
         browse.transitions.push(load);
         module.traits.push(browse);
         module
+    }
+
+    #[test]
+    fn a_text_default_of_a_node_field_is_an_anycodable_string() {
+        use orbital_core_base::ir::OirValue;
+        let text = OirValue::String("Ticket details".into());
+        assert_eq!(render_default(&SwiftLiteral, &text, &OirType::Node, None), Ok(Some("AnyCodable.string(\"Ticket details\")".to_string())));
+        assert_eq!(render_default(&SwiftLiteral, &text, &OirType::String, None), Ok(Some("\"Ticket details\"".to_string())), "control: a string field keeps its plain string literal");
+        assert!(render_default(&SwiftLiteral, &OirValue::Number(1.0), &OirType::Node, None).is_err(), "control: a number is not a text node");
     }
 
     #[test]
