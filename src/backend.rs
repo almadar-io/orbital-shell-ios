@@ -251,6 +251,7 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
         let hoisted = std::cell::RefCell::new(Vec::new());
         let mut fields_out = String::new();
         let mut keys_out = String::new();
+        let mut decode_out = String::new();
         for knob in &knobs {
             let name = &knob.name;
             let context = format!("{}{}", struct_name, split_to_pascal_case(name));
@@ -273,6 +274,10 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
                 None => ("?", "nil".to_string()),
             };
             fields_out.push_str(&format!("    var {ident}: {swift_type}{opt} = {value}\n"));
+            let fallback = if value == "nil" { String::new() } else { format!(" ?? {value}") };
+            decode_out.push_str(&format!(
+                "        {ident} = try container.decodeIfPresent({swift_type}.self, forKey: .{ident}){fallback}\n"
+            ));
             keys_out.push_str(&format!(
                 "        case {ident} = \"{}\"\n",
                 escape_double_quoted(name)
@@ -284,6 +289,9 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
         }
         content.push_str(&format!(
             "struct {struct_name}: Codable {{\n{fields_out}\n    enum CodingKeys: String, CodingKey {{\n{keys_out}    }}\n}}\n\n"
+        ));
+        content.push_str(&format!(
+            "extension {struct_name} {{\n    init(from decoder: Decoder) throws {{\n        let container = try decoder.container(keyedBy: CodingKeys.self)\n{decode_out}    }}\n}}\n\n"
         ));
     }
     GeneratedFile {
@@ -2189,6 +2197,31 @@ mod tests {
             content.contains("struct GameConfig: Codable {\n    var label: String? = nil\n    var pointsPerKill: Double = 10.0\n    var running: Bool = true\n\n    enum CodingKeys: String, CodingKey {\n        case label = \"label\"\n        case pointsPerKill = \"pointsPerKill\"\n        case running = \"running\"\n    }\n}"),
             "{content}"
         );
+    }
+
+    #[test]
+    fn a_config_decodes_an_omitted_knob_to_its_declared_default() {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        let mut t = OirTrait::new("Game");
+        let knob = |ty| orbital_core_base::ir::OirConfigFieldType { field_type: ty, values: None };
+        let mut schema = orbital_core_base::ir::OirConfigSchema::new();
+        schema.insert("running".into(), knob(OirType::Boolean));
+        schema.insert("label".into(), knob(OirType::String));
+        t.declared_config_schema = Some(schema);
+        let mut defaults = orbital_core_base::ir::OirObject::new();
+        defaults.insert("running".into(), OirValue::Bool(true));
+        t.declared_config_defaults = Some(defaults);
+        module.traits.push(t);
+        let content = events_swift(&module);
+        assert!(
+            content.contains("extension GameConfig {\n    init(from decoder: Decoder) throws {\n        let container = try decoder.container(keyedBy: CodingKeys.self)\n        label = try container.decodeIfPresent(String.self, forKey: .label)\n        running = try container.decodeIfPresent(Bool.self, forKey: .running) ?? true\n    }\n}"),
+            "{content}"
+        );
+    }
+
+    #[test]
+    fn control_a_payload_struct_keeps_the_synthesized_decoder() {
+        assert!(!events_swift(&payload_module()).contains("init(from decoder: Decoder)"));
     }
 
     #[test]
