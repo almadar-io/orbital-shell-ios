@@ -33,21 +33,18 @@ pub extern "C" fn orbital_native_ios_main() {
         .expect("install language bundle");
     let program = std::fs::read_to_string(bundle_file("program.orb")).expect("bundled program.orb");
     let host: NativeHost = serde_json::from_str(
-        &std::fs::read_to_string(bundle_file("native-host.json")).expect("bundled native-host.json"),
+        &std::fs::read_to_string(bundle_file("native-host.json"))
+            .expect("bundled native-host.json"),
     )
     .expect("native-host.json contract");
+    let css = orbital_client_dioxus::styles::program_stylesheets(
+        &orbital_core::schema::parse_schema(&program).expect("bundled program.orb"),
+    );
     match host {
-        NativeHost::Embedded => orbital_client_dioxus::native::start(
-            &program,
-            orbital_client_dioxus::styles::stylesheets(),
-            "Native App",
-        ),
-        NativeHost::Server { backend_url } => orbital_client_dioxus::native::start_server(
-            &program,
-            &backend_url,
-            orbital_client_dioxus::styles::stylesheets(),
-            "Native App",
-        ),
+        NativeHost::Embedded => orbital_client_dioxus::native::start(&program, css, "Native App"),
+        NativeHost::Server { backend_url } => {
+            orbital_client_dioxus::native::start_server(&program, &backend_url, css, "Native App")
+        }
     }
     .expect("native GPU mount");
 }
