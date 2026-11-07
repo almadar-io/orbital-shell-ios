@@ -1,8 +1,24 @@
 {
   "type": "game-audio-cue",
   "baseUrl": "baseUrl",
-  "cue": "coin",
   "cueSeq": 1,
+  "cuePlay": {
+    "key": "coin",
+    "source": "sfx/coin.mp3",
+    "volume": 0.9,
+    "loop": false,
+    "poolSize": 1,
+    "fadeMs": 0
+  },
+  "musicPlay": {
+    "key": "theme",
+    "source": "music/theme.mp3",
+    "volume": 1,
+    "loop": true,
+    "poolSize": 1,
+    "fadeMs": 1500
+  },
+  "autostart": [],
   "manifest": {
     "coin": {
       "path": "sfx/coin.mp3",
@@ -14,7 +30,6 @@
       "crossfade": true
     }
   },
-  "music": "theme",
   "muted": false,
   "volume": 0.8
 }

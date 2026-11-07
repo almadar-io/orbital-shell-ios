@@ -1,0 +1,31 @@
+name: {{APP_NAME}}
+targets:
+  {{APP_NAME}}:
+    type: application
+    platform: iOS
+    deploymentTarget: "{{NATIVE_GPU_MIN_IOS}}"
+    sources:
+      - path: main.c
+      - path: OrbitalVideoOverlay.m
+      - path: OrbitalMotion.m
+      - path: program.orb
+        buildPhase: resources
+      - path: language.json
+        buildPhase: resources
+      - path: native-host.json
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: {{APP_PACKAGE}}
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_DEBUG_DYLIB: "NO"
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+        ORB_NATIVE_FRAMEWORKS: "-framework Metal -framework QuartzCore -framework Foundation -framework CoreFoundation -framework CoreGraphics -framework CoreText -framework Security -framework SystemConfiguration -framework UIKit -framework WebKit -lobjc"
+        "OTHER_LDFLAGS[sdk=iphonesimulator*]": "$(inherited) $(PROJECT_DIR)/lib/aarch64-apple-ios-sim/{{NATIVE_GPU_LIBRARY}} $(ORB_NATIVE_FRAMEWORKS)"
+        "OTHER_LDFLAGS[sdk=iphoneos*]": "$(inherited) $(PROJECT_DIR)/lib/aarch64-apple-ios/{{NATIVE_GPU_LIBRARY}} $(ORB_NATIVE_FRAMEWORKS)"
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: "{{APP_TITLE}}"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait

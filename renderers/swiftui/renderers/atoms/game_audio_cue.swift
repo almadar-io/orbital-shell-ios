@@ -2,63 +2,23 @@ import AVFoundation
 import Foundation
 import SwiftUI
 
-@_silgen_name("orbital_audio_plan")
-private func orbital_audio_plan(_ previous: UnsafePointer<CChar>?, _ next: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>?
-@_silgen_name("orbital_audio_unlock")
-private func orbital_audio_unlock(_ next: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>?
-@_silgen_name("orbital_audio_free_string")
-private func orbital_audio_free_string(_ value: UnsafeMutablePointer<CChar>)
-
-private struct AudioPlan: Decodable {
-    let actions: [AudioAction]?
-    let error: String?
-}
-
-private struct AudioAction: Decodable {
-    let kind: String
-    let key: String?
-    let sources: [String]?
-    let volume: Float?
-    let looping: Bool?
-    let poolSize: Int?
-    let crossfadeMs: Double?
-}
-
-private enum AudioPolicyBridge {
-    static func plan(previous: String?, next: String, unlock: Bool = false) -> [AudioAction]? {
-        let pointer = next.withCString { nextPointer in
-            if unlock { return orbital_audio_unlock(nextPointer) }
-            if let previous {
-                return previous.withCString { orbital_audio_plan($0, nextPointer) }
-            }
-            return orbital_audio_plan(nil, nextPointer)
-        }
-        guard let pointer else { NSLog("OrbitalAudio: policy returned no plan"); return nil }
-        defer { orbital_audio_free_string(pointer) }
-        guard let data = String(cString: pointer).data(using: .utf8),
-              let response = try? JSONDecoder().decode(AudioPlan.self, from: data) else {
-            NSLog("OrbitalAudio: invalid policy plan")
-            return nil
-        }
-        if let error = response.error { NSLog("OrbitalAudio: policy error: %@", error); return nil }
-        return response.actions ?? []
-    }
-}
-
-private struct AudioEntry {
-    let paths: [String]
+/// A sound std-audio-cue resolved; the host plays it as given.
+private struct AudioPlay: Codable, Equatable {
+    let key: String
+    let source: String
     let volume: Float
     let loop: Bool
     let poolSize: Int
-    let crossfadeMs: Double
+    let fadeMs: Double
+}
 
-    init?(_ action: AudioAction) {
-        paths = action.sources ?? []
-        if paths.isEmpty { return nil }
-        volume = action.volume ?? 1
-        loop = action.looping ?? false
-        poolSize = max(1, action.poolSize ?? 1)
-        crossfadeMs = max(0, action.crossfadeMs ?? 1500)
+private func decodePlan<T: Decodable>(_ value: AnyCodable?, as type: T.Type) -> T? {
+    guard let value else { return nil }
+    do {
+        return try JSONDecoder().decode(T.self, from: JSONEncoder().encode(value))
+    } catch {
+        NSLog("OrbitalAudio: invalid game-audio-cue plan: %@", String(describing: error))
+        return nil
     }
 }
 
@@ -66,16 +26,19 @@ final class AtomAudioDriver: ObservableObject {
     private struct CueVoice {
         let player: AVPlayer
         let observer: NSObjectProtocol
-        let entry: AudioEntry
+        let entry: AudioPlay
     }
 
     private var cues: [String: [CueVoice]] = [:]
     private var music: AVPlayer?
-    private var musicEntry: AudioEntry?
+    private var musicEntry: AudioPlay?
     private var musicObserver: NSObjectProtocol?
     private var fadeTimer: Timer?
     private var fadeOutgoing: AVPlayer?
-    private var priorFrame: String?
+    private var priorCueSeq: Double?
+    private var priorMusic: AudioPlay?
+    private var synced = false
+    private var autostart: [AudioPlay] = []
     private var unlocked = false
     private var suspended = false
     private var muted = false
@@ -83,30 +46,25 @@ final class AtomAudioDriver: ObservableObject {
 
     func sync(_ next: AnyCodable) {
         muted = next.bool("muted")
-        volume = min(1, max(0, Float(next.float("volume", default: 1))))
-        guard let data = try? JSONEncoder().encode(next), let frame = String(data: data, encoding: .utf8),
-              let actions = AudioPolicyBridge.plan(previous: priorFrame, next: frame) else { return }
-        execute(actions)
-        priorFrame = frame
-        if !unlocked && !muted, let start = AudioPolicyBridge.plan(previous: nil, next: frame, unlock: true) {
-            execute(start)
+        volume = Float(next.float("volume", default: 1))
+        autostart = decodePlan(next["autostart"], as: [AudioPlay].self) ?? []
+        let cueSeq = next["cueSeq"]?.doubleValue
+        let music = decodePlan(next["musicPlay"], as: AudioPlay.self)
+        if !synced || music != priorMusic, let music {
+            changeMusic(music)
+        }
+        if synced, let before = priorCueSeq, let now = cueSeq, before != now,
+           let cue = decodePlan(next["cuePlay"], as: AudioPlay.self), !cue.key.isEmpty {
+            play(cue)
+        }
+        synced = true
+        priorCueSeq = cueSeq
+        priorMusic = music
+        if !unlocked && !muted {
+            autostart.forEach(play)
             unlocked = true
         }
         applyVolumes()
-    }
-
-    private func execute(_ actions: [AudioAction]) {
-        for action in actions {
-            switch action.kind {
-            case "playCue":
-                if let key = action.key, let entry = AudioEntry(action) { play(key, entry: entry) }
-            case "changeMusic":
-                if let key = action.key, let entry = AudioEntry(action) { changeMusic(key, entry: entry) }
-            case "stopMusic": changeMusic("", entry: nil)
-            case "setMuted", "setVolume": applyVolumes()
-            default: NSLog("OrbitalAudio: unknown policy action %@", action.kind)
-            }
-        }
     }
 
     private func source(_ path: String) -> URL? {
@@ -114,12 +72,13 @@ final class AtomAudioDriver: ObservableObject {
         return Bundle.main.resourceURL?.appendingPathComponent(path)
     }
 
-    private func level(_ entry: AudioEntry) -> Float {
+    private func level(_ entry: AudioPlay) -> Float {
         muted || suspended ? 0 : min(1, entry.volume * volume)
     }
 
-    private func play(_ key: String, entry sound: AudioEntry) {
-        guard !muted, let path = sound.paths.randomElement(), let url = source(path) else { return }
+    private func play(_ sound: AudioPlay) {
+        let key = sound.key
+        guard !muted, let url = source(sound.source) else { return }
         var pool = cues[key] ?? []
         if pool.count >= sound.poolSize {
             if sound.loop { return }
@@ -157,15 +116,15 @@ final class AtomAudioDriver: ObservableObject {
         fadeOutgoing = nil
     }
 
-    private func changeMusic(_ key: String, entry sound: AudioEntry?) {
+    private func changeMusic(_ sound: AudioPlay) {
         clearFade()
         let outgoing = music
         if let musicObserver { NotificationCenter.default.removeObserver(musicObserver) }
         musicObserver = nil
         music = nil
         musicEntry = nil
-        guard !key.isEmpty, let sound, let path = sound.paths.first, let url = source(path) else {
-            outgoing?.pause()
+        guard !sound.key.isEmpty, let url = source(sound.source) else {
+            fadeOut(outgoing, over: sound.fadeMs)
             return
         }
         let item = AVPlayerItem(url: url)
@@ -178,7 +137,7 @@ final class AtomAudioDriver: ObservableObject {
             if !self.suspended { incoming.play() }
         }
         if !suspended { incoming.play() }
-        guard let outgoing, sound.crossfadeMs > 0 else {
+        guard let outgoing, sound.fadeMs > 0 else {
             outgoing?.pause()
             incoming.volume = level(sound)
             return
@@ -189,8 +148,22 @@ final class AtomAudioDriver: ObservableObject {
         let started = ProcessInfo.processInfo.systemUptime
         fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self, weak incoming, weak outgoing] timer in
             guard let self, let incoming, let outgoing else { timer.invalidate(); return }
-            let fraction = min(1, Float((ProcessInfo.processInfo.systemUptime - started) * 1000 / sound.crossfadeMs))
+            let fraction = min(1, Float((ProcessInfo.processInfo.systemUptime - started) * 1000 / sound.fadeMs))
             incoming.volume = self.level(sound) * fraction
+            outgoing.volume = oldVolume * (1 - fraction)
+            if fraction >= 1 { self.clearFade() }
+        }
+    }
+
+    private func fadeOut(_ outgoing: AVPlayer?, over fadeMs: Double) {
+        guard let outgoing else { return }
+        guard fadeMs > 0, !suspended else { outgoing.pause(); return }
+        fadeOutgoing = outgoing
+        let oldVolume = outgoing.volume
+        let started = ProcessInfo.processInfo.systemUptime
+        fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self, weak outgoing] timer in
+            guard let self, let outgoing else { timer.invalidate(); return }
+            let fraction = min(1, Float((ProcessInfo.processInfo.systemUptime - started) * 1000 / fadeMs))
             outgoing.volume = oldVolume * (1 - fraction)
             if fraction >= 1 { self.clearFade() }
         }
@@ -235,7 +208,9 @@ final class AtomAudioDriver: ObservableObject {
             }
         }
         cues.removeAll()
-        priorFrame = nil
+        priorCueSeq = nil
+        priorMusic = nil
+        synced = false
         unlocked = false
     }
 

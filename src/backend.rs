@@ -9,7 +9,7 @@ use orbital_core_base::ir::{
 };
 use orbital_core_base::schema::{OrbitalSchema, ServiceDefinition};
 use orbital_core_base::str_utils::{
-    escape_double_quoted, sanitize_identifier, split_to_camel_case, split_to_pascal_case,
+    escape_double_quoted, literal_member_identifier, sanitize_identifier, split_to_camel_case, split_to_pascal_case,
     to_title_case,
 };
 
@@ -54,6 +54,21 @@ const SWIFT_KEYWORDS: &[&str] = &[
     "switch",
     "where",
     "while",
+    "precedencegroup",
+    "catch",
+    "throw",
+    "Any",
+    "as",
+    "await",
+    "false",
+    "is",
+    "nil",
+    "self",
+    "Self",
+    "super",
+    "throws",
+    "true",
+    "try",
 ];
 
 /// iOS code generation backend.
@@ -149,7 +164,16 @@ fn generate_entities_file(
     // shell's `emit_named_type_declarations`.
     let file_hoisted = std::cell::RefCell::new(Vec::new());
     for (name, ty) in named_types {
-        oir_type_to_swift_with(ty, &orbital_core_base::type_compat::type_identifier(name), &file_hoisted);
+        let ident = orbital_core_base::type_compat::type_identifier(name);
+        let cycle = CycleRoot {
+            named_types,
+            entities,
+            root: TypeRoot::Named(name.clone()),
+        };
+        let rendered = render_type(&SwiftRenderer::rooted(&ident, &file_hoisted, &cycle), ty, None);
+        if rendered != ident {
+            file_hoisted.borrow_mut().push(format!("typealias {ident} = {rendered}"));
+        }
     }
     for decl in file_hoisted.into_inner() {
         content.push_str(&decl);
@@ -157,7 +181,14 @@ fn generate_entities_file(
     }
 
     for entity in entities {
-        content.push_str(&generate_entity(entity));
+        content.push_str(&generate_entity_in(
+            entity,
+            &CycleRoot {
+                named_types,
+                entities,
+                root: TypeRoot::Row(entity.name.clone()),
+            },
+        ));
     }
 
     GeneratedFile {
@@ -323,6 +354,7 @@ const SWIFT_RESERVED_TYPES: &[&str] = &[
     "Form",
     "Group",
     "Image",
+    "Indirect",
     "Int",
     "JSONDecoder",
     "JSONEncoder",
@@ -367,7 +399,20 @@ fn swift_entity_type(entity: &str) -> String {
     }
 }
 
+#[cfg(test)]
 fn generate_entity(entity: &OirEntity) -> String {
+    let named_types = std::collections::BTreeMap::new();
+    generate_entity_in(
+        entity,
+        &CycleRoot {
+            named_types: &named_types,
+            entities: std::slice::from_ref(entity),
+            root: TypeRoot::Row(entity.name.clone()),
+        },
+    )
+}
+
+fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot) -> String {
     let mut out = String::new();
     let class_name = swift_entity_type(&entity.name);
 
@@ -388,11 +433,17 @@ fn generate_entity(entity: &OirEntity) -> String {
     for field in entity.fields.iter().filter(|f| f.name != "id") {
         let field_name = sanitize_identifier(&split_to_camel_case(&field.name), SWIFT_KEYWORDS);
         let (type_hint, optional) = type_for_field(entity, field);
-        let swift_type = oir_type_to_swift_with(
+        let swift_type = render_type(
+            &SwiftRenderer::rooted(
+                &format!("{}{}", class_name, split_to_pascal_case(&field.name)),
+                &hoisted,
+                cycle,
+            ),
             &type_hint,
-            &format!("{}{}", class_name, split_to_pascal_case(&field.name)),
-            &hoisted,
+            None,
         );
+        let boxed = cycle.reaches(&field.field_type);
+        let swift_type = if boxed { format!("Indirect<{swift_type}>") } else { swift_type };
         // Canonicalize optionality onto the type handed to `render_default` so
         // a `Null` default renders `nil` regardless of which of the two
         // optionality spellings (`Optional` wrapper vs. bare `required:
@@ -405,6 +456,7 @@ fn generate_entity(entity: &OirEntity) -> String {
         };
         let default = field.default.as_ref().and_then(|v| {
             match render_default(&SwiftLiteral, v, &default_ty, None) {
+                Ok(Some(rendered)) if boxed && rendered != "nil" => Some(format!("Indirect({rendered})")),
                 Ok(Some(rendered)) => Some(rendered),
                 Ok(None) => None,
                 // A comment at the value position is a swiftc error, never a Rust panic.
@@ -457,14 +509,11 @@ fn oir_type_to_swift_with(
     context_name: &str,
     hoisted: &std::cell::RefCell<Vec<String>>,
 ) -> String {
-    render_type(
-        &SwiftRenderer {
-            context_name: context_name.to_string(),
-            hoisted,
-        },
-        type_,
-        None,
-    )
+    render_type(&SwiftRenderer::new(context_name, hoisted), type_, None)
+}
+
+fn swift_enum_member(member: &str) -> String {
+    sanitize_identifier(&literal_member_identifier(member, split_to_camel_case), SWIFT_KEYWORDS)
 }
 
 fn generate_enum(enum_name: &str, values: &[String]) -> String {
@@ -473,7 +522,7 @@ fn generate_enum(enum_name: &str, values: &[String]) -> String {
     out.push_str(enum_name);
     out.push_str(": String, Codable {\n");
     for value in values {
-        let case_name = sanitize_identifier(&split_to_camel_case(value), SWIFT_KEYWORDS);
+        let case_name = swift_enum_member(value);
         out.push_str(&format!(
             "    case {} = \"{}\"\n",
             case_name,
@@ -1477,6 +1526,69 @@ fn enum_class_name(entity_name: &str, field_name: &str) -> String {
 struct SwiftRenderer<'a> {
     context_name: String,
     hoisted: &'a std::cell::RefCell<Vec<String>>,
+    cycle: Option<&'a CycleRoot<'a>>,
+}
+
+impl<'a> SwiftRenderer<'a> {
+    fn new(context_name: &str, hoisted: &'a std::cell::RefCell<Vec<String>>) -> Self {
+        Self { context_name: context_name.to_string(), hoisted, cycle: None }
+    }
+
+    fn rooted(context_name: &str, hoisted: &'a std::cell::RefCell<Vec<String>>, cycle: &'a CycleRoot<'a>) -> Self {
+        Self { context_name: context_name.to_string(), hoisted, cycle: Some(cycle) }
+    }
+
+    fn child(&self, context_name: String) -> Self {
+        Self { context_name, hoisted: self.hoisted, cycle: self.cycle }
+    }
+
+    fn reaches_root(&self, ty: &OirType) -> bool {
+        self.cycle.is_some_and(|cycle| cycle.reaches(ty))
+    }
+}
+
+/// The declaration being emitted: a named type or an entity's row struct.
+enum TypeRoot {
+    Named(String),
+    Row(String),
+}
+
+/// A Swift struct or enum holds its fields inline, so a declaration that reaches itself by value (not
+/// through an array or a dictionary, which are heap storage) has infinite size: the edge back to the
+/// root is boxed (`Indirect<T>`) or, for a union, the enum is `indirect`.
+struct CycleRoot<'a> {
+    named_types: &'a std::collections::BTreeMap<String, OirType>,
+    entities: &'a [OirEntity],
+    root: TypeRoot,
+}
+
+impl CycleRoot<'_> {
+    fn reaches(&self, ty: &OirType) -> bool {
+        self.reaches_from(ty, &mut std::collections::BTreeSet::new())
+    }
+
+    fn reaches_from<'t>(&'t self, ty: &'t OirType, seen: &mut std::collections::BTreeSet<(bool, &'t str)>) -> bool {
+        match ty {
+            OirType::Optional { inner } => self.reaches_from(inner, seen),
+            OirType::Struct { fields, .. } => fields.iter().any(|f| self.reaches_from(&f.field_type, seen)),
+            OirType::Union { variants } => variants.iter().any(|v| self.reaches_from(&v.field_type, seen)),
+            OirType::TypeRef { name } => {
+                matches!(&self.root, TypeRoot::Named(root) if root == name)
+                    || (seen.insert((false, name.as_str()))
+                        && self.named_types.get(name).is_some_and(|t| self.reaches_from(t, seen)))
+            }
+            OirType::Row { entity } => {
+                matches!(&self.root, TypeRoot::Row(root) if root == entity)
+                    || (seen.insert((true, entity.as_str()))
+                        && self
+                            .entities
+                            .iter()
+                            .find(|e| &e.name == entity)
+                            .is_some_and(|e| e.fields.iter().any(|f| self.reaches_from(&f.field_type, seen))))
+            }
+            _ => false,
+        }
+    }
 }
 
 impl TargetTypeRenderer for SwiftRenderer<'_> {
@@ -1542,11 +1654,9 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             .iter()
             .map(|f| {
                 let (effective_ty, optional) = f.effective_type();
-                let child = SwiftRenderer {
-                    context_name: format!("{}{}", name, split_to_pascal_case(&f.name)),
-                    hoisted: self.hoisted,
-                };
+                let child = self.child(format!("{}{}", name, split_to_pascal_case(&f.name)));
                 let t = render_type(&child, effective_ty, f.enum_values.as_deref());
+                let t = if self.reaches_root(&f.field_type) { format!("Indirect<{t}>") } else { t };
                 let opt = if optional { "?" } else { "" };
                 format!(
                     "var {}: {}{}",
@@ -1576,24 +1686,15 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             .map(|v| {
                 let case_name = sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(&v.name), SWIFT_KEYWORDS);
                 let variant_name = format!("{}{}", name, split_to_pascal_case(&v.name));
-                let child = SwiftRenderer {
-                    context_name: variant_name.clone(),
-                    hoisted: self.hoisted,
-                };
+                let child = self.child(variant_name.clone());
                 match &v.field_type {
                     OirType::Struct { fields, additional: _additional } => {
                         let parts: Vec<String> = fields
                             .iter()
                             .map(|f| {
                                 let (effective_ty, optional) = f.effective_type();
-                                let grandchild = SwiftRenderer {
-                                    context_name: format!(
-                                        "{}{}",
-                                        variant_name,
-                                        split_to_pascal_case(&f.name)
-                                    ),
-                                    hoisted: self.hoisted,
-                                };
+                                let grandchild =
+                                    self.child(format!("{}{}", variant_name, split_to_pascal_case(&f.name)));
                                 let t = render_type(
                                     &grandchild,
                                     effective_ty,
@@ -1637,8 +1738,9 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             .iter()
             .map(|(case, _)| format!("        case .{case}(let v): try c.encode(v)"))
             .collect();
+        let indirect = if variants.iter().any(|v| self.reaches_root(&v.field_type)) { "indirect " } else { "" };
         self.hoisted.borrow_mut().push(format!(
-            "enum {name}: Codable {{\n    {}\n    init(from decoder: Decoder) throws {{\n        let c = try decoder.singleValueContainer()\n{}\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no {name} arm matches\")\n    }}\n    func encode(to encoder: Encoder) throws {{\n        var c = encoder.singleValueContainer()\n        switch self {{\n{}\n        }}\n    }}\n}}",
+            "{indirect}enum {name}: Codable {{\n    {}\n    init(from decoder: Decoder) throws {{\n        let c = try decoder.singleValueContainer()\n{}\n        throw DecodingError.dataCorruptedError(in: c, debugDescription: \"no {name} arm matches\")\n    }}\n    func encode(to encoder: Encoder) throws {{\n        var c = encoder.singleValueContainer()\n        switch self {{\n{}\n        }}\n    }}\n}}",
             decls.join("\n    "),
             decodes.join("\n"),
             encodes.join("\n")
@@ -1736,10 +1838,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
 pub fn classify_oir_type(type_: &OirType) -> TypeMappingClass {
     let hoisted = std::cell::RefCell::new(Vec::new());
     classify_type(
-        &SwiftRenderer {
-            context_name: "Ctx".to_string(),
-            hoisted: &hoisted,
-        },
+        &SwiftRenderer::new("Ctx", &hoisted),
         type_,
         None,
     )
@@ -1749,10 +1848,7 @@ pub fn classify_oir_type(type_: &OirType) -> TypeMappingClass {
 fn oir_type_to_swift(type_: &OirType, context_name: &str) -> String {
     let hoisted = std::cell::RefCell::new(Vec::new());
     render_type(
-        &SwiftRenderer {
-            context_name: context_name.to_string(),
-            hoisted: &hoisted,
-        },
+        &SwiftRenderer::new(context_name, &hoisted),
         type_,
         None,
     )
@@ -1765,10 +1861,7 @@ fn oir_type_to_swift(type_: &OirType, context_name: &str) -> String {
 fn oir_type_to_swift_hoisted(type_: &OirType, context_name: &str) -> (String, Vec<String>) {
     let hoisted = std::cell::RefCell::new(Vec::new());
     let ty = render_type(
-        &SwiftRenderer {
-            context_name: context_name.to_string(),
-            hoisted: &hoisted,
-        },
+        &SwiftRenderer::new(context_name, &hoisted),
         type_,
         None,
     );
@@ -1809,14 +1902,20 @@ impl TargetLiteralRenderer for SwiftLiteral {
         format!("\"{}\"", escape_double_quoted(s))
     }
     fn enum_member(&self, enum_name: &str, member: &str) -> String {
-        format!(
-            "{}.{}",
-            enum_name,
-            sanitize_identifier(&split_to_camel_case(member), SWIFT_KEYWORDS)
-        )
+        match orbital_core_base::type_compat::literal_union_members(enum_name) {
+            Some(_) => format!(".{}", swift_enum_member(member)),
+            None => format!("{}.{}", enum_name, swift_enum_member(member)),
+        }
     }
     fn array(&self, items: Vec<String>) -> String {
         format!("[{}]", items.join(", "))
+    }
+    fn map(&self, entries: Vec<(String, String)>) -> Option<String> {
+        if entries.is_empty() {
+            return Some("[:]".to_string());
+        }
+        let pairs: Vec<String> = entries.into_iter().map(|(k, v)| format!("{}: {v}", self.string(&k))).collect();
+        Some(format!("[{}]", pairs.join(", ")))
     }
     fn union_arm(&self, arm: &str, inner: String) -> String {
         format!(".{}({inner})", sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(arm), SWIFT_KEYWORDS))
@@ -1827,6 +1926,56 @@ impl TargetLiteralRenderer for SwiftLiteral {
 mod tests {
     use super::*;
     use orbital_core_base::ir::{OirEvent, OirPage, OirState, OirTrait, OirTraitBinding};
+
+    #[test]
+    fn an_operator_or_dotted_literal_member_is_a_distinct_legal_swift_case() {
+        let values: Vec<String> = ["==", "!=", "127.0.0.1", "in-progress"].iter().map(|v| v.to_string()).collect();
+        let decl = generate_enum("Op", &values);
+        for case in ["case __3d__3d_ = \"==\"", "case __21__3d_ = \"!=\"", "case _127_2e_0_2e_0_2e_1 = \"127.0.0.1\"", "case inProgress = \"in-progress\""] {
+            assert!(decl.contains(case), "{decl}");
+        }
+        assert_eq!(SwiftLiteral.enum_member("Op", "!="), "Op.__21__3d_", "a reference spells the case the declaration does");
+    }
+
+    #[test]
+    fn an_expression_keyword_member_is_escaped_as_a_swift_case() {
+        let values: Vec<String> = ["true", "false", "nil", "self", "step"].iter().map(|v| v.to_string()).collect();
+        let decl = generate_enum("Flag", &values);
+        for case in ["case true_ = \"true\"", "case false_ = \"false\"", "case nil_ = \"nil\"", "case self_ = \"self\"", "case step = \"step\""] {
+            assert!(decl.contains(case), "{decl}");
+        }
+    }
+
+    #[test]
+    fn a_text_default_of_a_node_field_is_an_anycodable_string() {
+        use orbital_core_base::ir::OirValue;
+        let text = OirValue::String("Ticket details".into());
+        assert_eq!(render_default(&SwiftLiteral, &text, &OirType::Node, None), Ok(Some("AnyCodable.string(\"Ticket details\")".to_string())));
+        assert_eq!(render_default(&SwiftLiteral, &text, &OirType::String, None), Ok(Some("\"Ticket details\"".to_string())), "control: a string field keeps its plain string literal");
+        assert!(render_default(&SwiftLiteral, &OirValue::Number(1.0), &OirType::Node, None).is_err(), "control: a number is not a text node");
+    }
+
+    #[test]
+    fn a_map_default_renders_as_a_swift_dictionary_literal() {
+        use orbital_core_base::ir::{render_default, OirType, OirValue};
+        let ty = OirType::Map { key: Box::new(OirType::String), value: Box::new(OirType::Array { inner: Box::new(OirType::Number) }) };
+        assert_eq!(render_default(&SwiftLiteral, &OirValue::Object(Default::default()), &ty, None), Ok(Some("[:]".to_string())));
+        let mut fields = orbital_core_base::ir::types::OirObject::default();
+        fields.insert("open".to_string(), OirValue::Array(vec![OirValue::Number(1.0)]));
+        assert_eq!(render_default(&SwiftLiteral, &OirValue::Object(fields), &ty, None), Ok(Some("[\"open\": [1.0]]".to_string())));
+        let st = OirType::Struct { additional: None, fields: vec![orbital_core_base::ir::OirField::new("id", OirType::String)].into() };
+        assert_eq!(render_default(&SwiftLiteral, &OirValue::Object(Default::default()), &st, None), Ok(None), "control: a struct default still declines");
+    }
+
+    #[test]
+    fn a_list_of_literal_union_members_is_implicit_members_of_the_declared_type() {
+        use orbital_core_base::ir::OirValue;
+        let ty = OirType::Array { inner: Box::new(OirType::Enum { name: "\"text\" | \"list\"".into() }) };
+        let value = OirValue::Array(vec![OirValue::String("text".into()), OirValue::String("list".into())]);
+        let rendered = render_default(&SwiftLiteral, &value, &ty, None).unwrap().unwrap();
+        assert!(rendered.contains(".text") && rendered.contains(".list") && !rendered.contains('|'), "{rendered}");
+        assert_eq!(SwiftLiteral.enum_member("Mode", "on"), "Mode.on", "control: a named enum keeps its own name");
+    }
     use orbital_core_base::schema::{RestServiceDefInner, ServiceDefinition, ServiceRef};
 
     fn trait_rendering_main(name: &str, children: &[&str]) -> orbital_core_base::ir::OirTrait {
@@ -1891,15 +2040,6 @@ mod tests {
         browse.transitions.push(load);
         module.traits.push(browse);
         module
-    }
-
-    #[test]
-    fn a_text_default_of_a_node_field_is_an_anycodable_string() {
-        use orbital_core_base::ir::OirValue;
-        let text = OirValue::String("Ticket details".into());
-        assert_eq!(render_default(&SwiftLiteral, &text, &OirType::Node, None), Ok(Some("AnyCodable.string(\"Ticket details\")".to_string())));
-        assert_eq!(render_default(&SwiftLiteral, &text, &OirType::String, None), Ok(Some("\"Ticket details\"".to_string())), "control: a string field keeps its plain string literal");
-        assert!(render_default(&SwiftLiteral, &OirValue::Number(1.0), &OirType::Node, None).is_err(), "control: a number is not a text node");
     }
 
     #[test]
@@ -2107,6 +2247,101 @@ mod tests {
         holder.fields.push(OirField::new("claim", OirType::TypeRef { name: alias.to_string() }));
         module.entities.push(holder);
         module
+    }
+
+    #[test]
+    fn a_named_map_alias_is_declared_as_a_typealias() {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        module.named_types.insert(
+            "std-store::Row".to_string(),
+            OirType::Map { key: Box::new(OirType::String), value: Box::new(OirType::String) },
+        );
+        let content = entities_file(&module);
+        assert!(content.contains("typealias StdStoreRow = [String: String]"), "{content}");
+        let control = entities_file(&holder_module("std-foo::Bar"));
+        assert!(!control.contains("typealias StdFooBar"), "control: a struct is declared, not aliased: {control}");
+    }
+
+    fn type_ref(name: &str) -> OirType {
+        OirType::TypeRef { name: name.to_string() }
+    }
+
+    #[test]
+    fn a_struct_reaching_itself_by_value_boxes_that_edge_and_a_collection_does_not() {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        module.named_types.insert(
+            "Schema".to_string(),
+            OirType::Struct {
+                additional: None,
+                fields: vec![
+                    OirField::new("items", OirType::optional(type_ref("Schema"))),
+                    OirField::new("wrap", OirType::optional(OirType::Struct {
+                        additional: None,
+                        fields: vec![OirField::new("inner", OirType::optional(type_ref("Schema")))].into(),
+                    })),
+                    OirField::new("properties", OirType::optional(OirType::Map {
+                        key: Box::new(OirType::String),
+                        value: Box::new(type_ref("Schema")),
+                    })),
+                    OirField::new("list", OirType::optional(OirType::Array { inner: Box::new(type_ref("Schema")) })),
+                ]
+                .into(),
+            },
+        );
+        module.named_types.insert(
+            "Tool".to_string(),
+            OirType::Struct { additional: None, fields: vec![OirField::new("schema", type_ref("Schema"))].into() },
+        );
+        let content = entities_file(&module);
+        assert!(content.contains("var items: Indirect<Schema>?"), "{content}");
+        assert!(content.contains("var wrap: Indirect<SchemaWrap>?"), "a nested struct back to the root is boxed: {content}");
+        assert!(content.contains("var properties: [String: Schema]?"), "control: a dictionary is heap storage: {content}");
+        assert!(content.contains("var list: [Schema]?"), "control: an array is heap storage: {content}");
+        assert!(content.contains("struct Tool: Codable { var schema: Schema }"), "control: a holder of a finite type is not boxed: {content}");
+    }
+
+    #[test]
+    fn a_union_reaching_itself_is_indirect_and_a_finite_union_is_not() {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        module.named_types.insert(
+            "Pred".to_string(),
+            OirType::Union {
+                variants: vec![
+                    OirField::new("leaf", OirType::String),
+                    OirField::new("not", OirType::Struct {
+                        additional: None,
+                        fields: vec![OirField::new("of", type_ref("Pred"))].into(),
+                    }),
+                ]
+                .into(),
+            },
+        );
+        module.named_types.insert(
+            "Query".to_string(),
+            OirType::Struct { additional: None, fields: vec![OirField::new("filter", OirType::optional(type_ref("Pred")))].into() },
+        );
+        module.named_types.insert(
+            "Flat".to_string(),
+            OirType::Union { variants: vec![OirField::new("leaf", OirType::String)].into() },
+        );
+        let content = entities_file(&module);
+        assert!(content.contains("indirect enum Pred: Codable {"), "{content}");
+        assert!(content.contains("struct PredNot: Codable { var of: Pred }"), "the indirect enum breaks the cycle: {content}");
+        assert!(content.contains("struct Query: Codable { var filter: Pred? }"), "control: {content}");
+        assert!(content.contains("\nenum Flat: Codable {"), "control: a finite union stays a value enum: {content}");
+    }
+
+    #[test]
+    fn an_entity_holding_its_own_row_boxes_it_and_another_row_stays_a_value() {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        let mut node = OirEntity::new("Node");
+        node.fields.push(OirField::new("parent", OirType::optional(OirType::Row { entity: "Node".into() })));
+        node.fields.push(OirField::new("owner", OirType::optional(OirType::Row { entity: "Owner".into() })));
+        module.entities.push(node);
+        module.entities.push(OirEntity::new("Owner"));
+        let content = entities_file(&module);
+        assert!(content.contains("var parent: Indirect<Node>?"), "{content}");
+        assert!(content.contains("var owner: Owner?"), "control: {content}");
     }
 
     #[test]
@@ -3076,10 +3311,7 @@ mod tests {
         let hoisted = std::cell::RefCell::new(Vec::new());
         assert_eq!(
             render_type(
-                &SwiftRenderer {
-                    context_name: "Ctx".to_string(),
-                    hoisted: &hoisted
-                },
+                &SwiftRenderer::new("Ctx", &hoisted),
                 &OirType::String,
                 Some(&vals)
             ),
@@ -3087,10 +3319,7 @@ mod tests {
         );
         assert_eq!(
             render_type(
-                &SwiftRenderer {
-                    context_name: "Ctx".to_string(),
-                    hoisted: &hoisted
-                },
+                &SwiftRenderer::new("Ctx", &hoisted),
                 &OirType::enum_type("Status"),
                 Some(&vals)
             ),

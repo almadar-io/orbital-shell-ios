@@ -91,7 +91,7 @@ struct DockLayoutOrganismView: View {
                     gutter("panel-left", sidebarShown ? "Collapse sidebar" : "Expand sidebar", expanded: sidebarShown, event: props.string("onSidebarCollapsedChange")) { sidebarLocal = sidebarShown }
                     edge(true)
                 }
-                mainRow(secondaryShown: secondaryShown)
+                mainRow(secondaryShown: secondaryShown, secondaryWidth: secondaryWidth)
             }
             .frame(maxHeight: .infinity)
             if slot("bottomPanel") != nil {
@@ -117,7 +117,7 @@ struct DockLayoutOrganismView: View {
         }
     }
 
-    private func mainRow(secondaryShown: Bool) -> some View {
+    private func mainRow(secondaryShown: Bool, secondaryWidth: CGFloat) -> some View {
         HStack(spacing: theme.density.spacing.space0) {
             ScrollView {
                 if let main = slot("main") { RenderChild(main, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }

@@ -14,5 +14,7 @@ default = []
 research-video = ["orbital-client-dioxus/research-video"]
 
 [dependencies]
-orbital-client-dioxus = { git = "https://github.com/almadar-io/orbital-shell-rust", branch = "main", features = ["native"] }
+orbital-client-dioxus = { git = "https://github.com/almadar-io/orbital-shell-rust", branch = "main", features = ["native", "native-http"] }
 orbital-core = { git = "https://github.com/almadar-io/orbital-core", branch = "main" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

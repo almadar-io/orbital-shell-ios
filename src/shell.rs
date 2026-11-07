@@ -4,10 +4,10 @@ use orbital_core_base::shell::{Shell, ShellError};
 use orbital_core_base::str_utils::{split_to_pascal_case, to_title_case};
 use std::path::{Path, PathBuf};
 
-const CORE_SOURCES: &[(&str, &str)] = &[(
-    "Sources/OrbitalApp/AnyCodable.swift",
-    include_str!("../core/AnyCodable.swift"),
-)];
+const CORE_SOURCES: &[(&str, &str)] = &[
+    ("Sources/OrbitalApp/AnyCodable.swift", include_str!("../core/AnyCodable.swift")),
+    ("Sources/OrbitalApp/Indirect.swift", include_str!("../core/Indirect.swift")),
+];
 
 /// iOS shell for native SwiftUI projects.
 pub struct IosShell {
@@ -278,7 +278,7 @@ fn parse_project_yml_sources(text: &str) -> Vec<PathBuf> {
     roots
 }
 
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), ShellError> {
+pub(crate) fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), ShellError> {
     if !dst.exists() {
         std::fs::create_dir_all(dst)?;
     }
@@ -308,7 +308,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), ShellError> {
     Ok(())
 }
 
-fn build_replacements(project_name: &str) -> std::collections::HashMap<&'static str, String> {
+pub(crate) fn build_replacements(project_name: &str) -> std::collections::HashMap<&'static str, String> {
     let mut map = std::collections::HashMap::new();
     let package = to_package_name(project_name);
     let class_name = split_to_pascal_case(&package);
@@ -321,7 +321,7 @@ fn build_replacements(project_name: &str) -> std::collections::HashMap<&'static 
     map
 }
 
-fn replace_placeholders_in_dir(
+pub(crate) fn replace_placeholders_in_dir(
     dir: &Path,
     replacements: &std::collections::HashMap<&str, String>,
 ) -> Result<(), ShellError> {

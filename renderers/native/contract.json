@@ -1,0 +1,8 @@
+{
+  "contractVersion": 1,
+  "targets": ["aarch64-apple-ios", "aarch64-apple-ios-sim"],
+  "library": "liborbital_shell_ios_native_host.a",
+  "minIos": "16.0",
+  "productionFeatureSet": "",
+  "researchFeatureSet": "research-video"
+}

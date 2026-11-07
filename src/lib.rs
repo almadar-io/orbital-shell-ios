@@ -3,6 +3,7 @@
 //! Emits a SwiftUI Xcode project from an `OirModule`.
 
 mod backend;
+pub mod native_gpu;
 mod pack;
 mod shell;
 pub mod shell_program;
