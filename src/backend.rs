@@ -1,6 +1,7 @@
 //! iOS backend code generation.
 
 use orbital_core_base::generate::{Backend, GeneratedFile, GeneratedOutput};
+use orbital_core_base::ir::cycle::{CycleRoot, TypeRoot};
 #[cfg(test)]
 use orbital_core_base::ir::OirValue;
 use orbital_core_base::ir::{
@@ -1544,50 +1545,6 @@ impl<'a> SwiftRenderer<'a> {
 
     fn reaches_root(&self, ty: &OirType) -> bool {
         self.cycle.is_some_and(|cycle| cycle.reaches(ty))
-    }
-}
-
-/// The declaration being emitted: a named type or an entity's row struct.
-enum TypeRoot {
-    Named(String),
-    Row(String),
-}
-
-/// A Swift struct or enum holds its fields inline, so a declaration that reaches itself by value (not
-/// through an array or a dictionary, which are heap storage) has infinite size: the edge back to the
-/// root is boxed (`Indirect<T>`) or, for a union, the enum is `indirect`.
-struct CycleRoot<'a> {
-    named_types: &'a std::collections::BTreeMap<String, OirType>,
-    entities: &'a [OirEntity],
-    root: TypeRoot,
-}
-
-impl CycleRoot<'_> {
-    fn reaches(&self, ty: &OirType) -> bool {
-        self.reaches_from(ty, &mut std::collections::BTreeSet::new())
-    }
-
-    fn reaches_from<'t>(&'t self, ty: &'t OirType, seen: &mut std::collections::BTreeSet<(bool, &'t str)>) -> bool {
-        match ty {
-            OirType::Optional { inner } => self.reaches_from(inner, seen),
-            OirType::Struct { fields, .. } => fields.iter().any(|f| self.reaches_from(&f.field_type, seen)),
-            OirType::Union { variants } => variants.iter().any(|v| self.reaches_from(&v.field_type, seen)),
-            OirType::TypeRef { name } => {
-                matches!(&self.root, TypeRoot::Named(root) if root == name)
-                    || (seen.insert((false, name.as_str()))
-                        && self.named_types.get(name).is_some_and(|t| self.reaches_from(t, seen)))
-            }
-            OirType::Row { entity } => {
-                matches!(&self.root, TypeRoot::Row(root) if root == entity)
-                    || (seen.insert((true, entity.as_str()))
-                        && self
-                            .entities
-                            .iter()
-                            .find(|e| &e.name == entity)
-                            .is_some_and(|e| e.fields.iter().any(|f| self.reaches_from(&f.field_type, seen))))
-            }
-            _ => false,
-        }
     }
 }
 
