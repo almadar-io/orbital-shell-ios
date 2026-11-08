@@ -1487,7 +1487,7 @@ struct GeneratedPage: View {{
 /// `Sources/OrbitalAppTests/Resources/pattern-fixtures/*.json` into the
 /// test target.
 fn generate_resolved_schema_file(schema: &OrbitalSchema) -> GeneratedFile {
-    let content = orbital_core_eval::util::canonical_json::to_canonical_string_pretty(schema)
+    let content = orbital_core_eval::util::canonical_json::to_canonical_string(schema)
         .unwrap_or_else(|e| format!("{{\"error\": \"failed to serialize resolved schema: {e}\"}}"));
     GeneratedFile {
         path: "Sources/OrbitalApp/Resources/resolved_schema.json".to_string(),
