@@ -26,7 +26,7 @@ struct MasterDetailLayoutOrganismView: View {
     }
 
     private var masterPane: some View {
-        ScrollView {
+        AlmadarBoundedScrollView {
             slot(props.dictValue?["master"])
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
@@ -35,7 +35,7 @@ struct MasterDetailLayoutOrganismView: View {
     @ViewBuilder
     private var detailPane: some View {
         if props.bool("hasSelection") {
-            ScrollView {
+            AlmadarBoundedScrollView {
                 slot(props.dictValue?["detail"])
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }

@@ -15,7 +15,7 @@ struct PullToRefreshMoleculeView: View {
 
     var body: some View {
         let event = props.string("refreshEvent")
-        ScrollView {
+        AlmadarBoundedScrollView {
             VStack(alignment: .leading, spacing: theme.density.spacing.space2) {
                 HStack {
                     Spacer(minLength: theme.density.spacing.space0)

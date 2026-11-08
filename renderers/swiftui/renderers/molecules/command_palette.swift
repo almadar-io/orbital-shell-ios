@@ -58,7 +58,7 @@ struct CommandPaletteMoleculeView: View {
                     AtomKit.typo(props.string("emptyLabel", default: "No matching commands"), "body1", color: "muted", align: "center", onEvent: onEvent)
                         .padding(.vertical, theme.density.spacing.space6)
                 } else {
-                    ScrollView {
+                    AlmadarBoundedScrollView {
                         VStack(alignment: .leading, spacing: theme.density.spacing.space0) {
                             ForEach(shown.indices, id: \.self) { index in
                                 section(shown[index].name, shown[index].items)

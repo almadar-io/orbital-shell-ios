@@ -63,7 +63,7 @@ struct AuthLayoutTemplateView: View {
     }
 
     private func form(wide: Bool, roomy: Bool) -> some View {
-        ScrollView {
+        AlmadarBoundedScrollView {
             VStack(spacing: theme.density.spacing.space0) {
                 if !wide {
                     brand(onPrimary: false)

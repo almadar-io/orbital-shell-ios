@@ -59,10 +59,12 @@ struct StackAtomView: View {
             if props.bool("wrap") && horizontal {
                 AtomFlowLayout(spacing: gap) { rows(children, horizontal: horizontal, align: align, distribute: true) }
             } else if horizontal {
-                HStack(alignment: crossVertical(align), spacing: gap) {
-                    lead(justify)
-                    rows(children, horizontal: true, align: align, distribute: true)
-                    trail(justify)
+                AtomRowBound {
+                    HStack(alignment: crossVertical(align), spacing: gap) {
+                        lead(justify)
+                        rows(children, horizontal: true, align: align, distribute: true)
+                        trail(justify)
+                    }
                 }
             } else {
                 VStack(alignment: crossHorizontal(align), spacing: gap) {
@@ -90,6 +92,7 @@ struct StackAtomView: View {
         ForEach(children.indices, id: \.self) { index in
             if distribute && index > 0 && (justify == "between" || justify == "around" || justify == "evenly") { Spacer(minLength: theme.density.spacing.space0) }
             RenderChild(children[index], onEvent: onEvent)
+                .environment(\.almadarInFlexRow, horizontal)
                 .frame(maxWidth: !horizontal && align == "stretch" ? .infinity : nil, maxHeight: horizontal && align == "stretch" ? .infinity : nil, alignment: .topLeading)
         }
     }

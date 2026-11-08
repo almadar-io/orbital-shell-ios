@@ -156,7 +156,7 @@ struct DocumentViewerMoleculeView: View {
                 .frame(height: tall)
                 .clipped()
         } else {
-            ScrollView {
+            AlmadarBoundedScrollView {
                 if kind == "html" {
                     AtomKit.typo(AtomKit.plainHTML(text), "body1", onEvent: onEvent)
                         .frame(maxWidth: .infinity, alignment: .leading)

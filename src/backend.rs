@@ -1161,7 +1161,7 @@ final class PatternSnapshotTests: XCTestCase {{
         content,
     });
 
-    for name in ["OrbitalAuthTests.swift", "CodeBufferTests.swift"] {
+    for name in ["OrbitalAuthTests.swift", "CodeBufferTests.swift", "ClassUtilityTests.swift", "SvgImageTests.swift"] {
         files.push(GeneratedFile {
             path: format!("Sources/OrbitalAppTests/{name}"),
             content: crate::pack::pack()
@@ -1437,7 +1437,13 @@ struct GeneratedPage: View {{
     }}
 
     var body: some View {{
-        mainBody
+        GeometryReader {{ viewport in
+            ScrollView {{
+                mainBody
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }}
+            .environment(\.almadarPageHeight, viewport.size.height)
+        }}
             .modifier(AlmadarSurfaceEnter(shape: "pageEnter", timing: .page, replayKey: pageName))
             .verificationContainer(mainSlotId)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -2754,6 +2760,16 @@ mod tests {
         assert!(content.contains(
             "try kernel.dispatch(trait: trait, entityId: entityId, event: event, payloadJSON: payloadJSON)"
         ));
+    }
+
+
+    #[test]
+    fn a_page_scrolls_like_the_web_document_and_publishes_its_viewport_height() {
+        let app = generate_app_file(&OirModule::new("TestApp", "1.0.0")).content;
+        let at = app.find("GeometryReader { viewport in").expect("the page reads its viewport");
+        let page = &app[at..(at + 260).min(app.len())];
+        assert!(page.contains("ScrollView {"));
+        assert!(page.contains(".environment(\\.almadarPageHeight, viewport.size.height)"));
     }
 
     /// `resolved_schema.json` loads on a background queue

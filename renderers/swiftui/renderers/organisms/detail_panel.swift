@@ -32,7 +32,7 @@ struct DetailPanelOrganismView: View {
         } else if record == nil && !fields.isEmpty {
             EmptyStateRenderer(props: AtomKit.child(props, ["title": "Not found", "description": "The item could not be found."]), modifier: nil, onEvent: onEvent)
         } else {
-            ScrollView {
+            AlmadarBoundedScrollView {
                 VStack(alignment: .leading, spacing: theme.density.spacing.space6) {
                     header
                     figures

@@ -13,7 +13,7 @@ struct GenericAppTemplateView: View {
         VStack(spacing: theme.density.spacing.space0) {
             BoxRenderer(props: AtomKit.child(props, ["padding": "md", "fullWidth": true, "children": .array([header])]), modifier: nil, onEvent: onEvent)
             DividerRenderer(props: [:], modifier: nil, onEvent: onEvent)
-            ScrollView {
+            AlmadarBoundedScrollView {
                 BoxRenderer(
                     props: AtomKit.child(props, ["padding": "lg", "fullWidth": true, "entity": props.dictValue?["entity"] ?? .null, "children": .array(props.children())]),
                     modifier: nil,

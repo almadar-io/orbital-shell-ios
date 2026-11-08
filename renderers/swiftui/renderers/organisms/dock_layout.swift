@@ -84,7 +84,7 @@ struct DockLayoutOrganismView: View {
                 }
                 if let sidebar = slot("sidebar") {
                     if sidebarShown {
-                        ScrollView { RenderChild(sidebar, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
+                        AlmadarBoundedScrollView { RenderChild(sidebar, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
                             .frame(width: sidebarWidth)
                         edge(true)
                     }
@@ -105,7 +105,7 @@ struct DockLayoutOrganismView: View {
             }
             if bottomShown, let bottom = slot("bottomPanel") {
                 edge(false)
-                ScrollView { RenderChild(bottom, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
+                AlmadarBoundedScrollView { RenderChild(bottom, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
                     .frame(height: bottomHeight)
             }
             if let status = slot("statusBar") {
@@ -119,7 +119,7 @@ struct DockLayoutOrganismView: View {
 
     private func mainRow(secondaryShown: Bool, secondaryWidth: CGFloat) -> some View {
         HStack(spacing: theme.density.spacing.space0) {
-            ScrollView {
+            AlmadarBoundedScrollView {
                 if let main = slot("main") { RenderChild(main, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -128,7 +128,7 @@ struct DockLayoutOrganismView: View {
                 gutter("panel-right", secondaryShown ? "Collapse secondary sidebar" : "Expand secondary sidebar", expanded: secondaryShown, event: props.string("onSecondarySidebarCollapsedChange")) { secondaryLocal = secondaryShown }
                 if secondaryShown {
                     edge(true)
-                    ScrollView { RenderChild(secondary, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
+                    AlmadarBoundedScrollView { RenderChild(secondary, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
                         .frame(width: secondaryWidth)
                 }
             }
@@ -142,7 +142,7 @@ struct DockLayoutOrganismView: View {
                     topBar
                     edge(false)
                 }
-                ScrollView {
+                AlmadarBoundedScrollView {
                     if let main = slot("main") { RenderChild(main, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
                 }
                 .frame(maxHeight: .infinity)
@@ -187,7 +187,7 @@ struct DockLayoutOrganismView: View {
                 }
                 .padding(theme.density.spacing.space4)
                 edge(false)
-                ScrollView {
+                AlmadarBoundedScrollView {
                     if let content = content { RenderChild(content, onEvent: onEvent).frame(maxWidth: .infinity, alignment: .topLeading) }
                 }
             }

@@ -59,7 +59,7 @@ struct AgentChatFeedMoleculeView: View {
         } else {
             let grouped = turns(activities)
             ScrollViewReader { proxy in
-                ScrollView {
+                AlmadarBoundedScrollView {
                     VStack(alignment: .leading, spacing: theme.density.spacing.space2) {
                         ForEach(grouped.indices, id: \.self) { index in
                             turn(grouped[index], index: index, previous: index > 0 ? grouped[index - 1] : nil, last: index == grouped.count - 1, working: working, activities: activities)

@@ -65,8 +65,8 @@ struct HeaderMoleculeView: View {
         let target = AtomKit.navigate(.dict(["href": .string(props.string("brandHref"))]))
         return HStack(spacing: theme.density.spacing.space2) {
             if !logo.isEmpty {
-                ImageRenderer(props: ["src": .string(logo), "alt": .string(name), "fit": "contain"], modifier: nil, onEvent: onEvent)
-                    .frame(height: theme.density.spacing.space8)
+                ImageRenderer(props: ["src": .string(logo), "alt": .string(name), "fit": "contain", "rounded": "none"], modifier: nil, onEvent: onEvent)
+                    .frame(width: theme.density.rowHeightSpacious, height: theme.density.buttonHeightMd)
             }
             AtomKit.typo(name, variant, onEvent: onEvent)
         }

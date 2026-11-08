@@ -117,6 +117,30 @@ int32_t orbital_canvas_render_to_rgba(
     size_t *out_len
 );
 
+int32_t orbital_canvas_decode_data_url(const char *url, uint8_t **out_bytes, size_t *out_len, char **out_mime);
+
+int32_t orbital_canvas_asset_is_svg(const char *url, const char *content_type);
+
+int32_t orbital_canvas_svg_size(
+    const char *key,
+    const uint8_t *bytes,
+    size_t len,
+    uint32_t *out_width,
+    uint32_t *out_height
+);
+
+int32_t orbital_canvas_svg_rasterize(
+    const char *key,
+    const uint8_t *bytes,
+    size_t len,
+    float scale,
+    uint32_t max_dim,
+    uint32_t *out_width,
+    uint32_t *out_height,
+    uint8_t **out_pixels,
+    size_t *out_len
+);
+
 void orbital_canvas_free_rgba(uint8_t *pixels, size_t len);
 void orbital_canvas_free_string(char *s);
 

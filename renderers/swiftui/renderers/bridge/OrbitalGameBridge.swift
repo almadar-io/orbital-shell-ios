@@ -118,6 +118,117 @@ func orbital_canvas_render_to_rgba(
 @_silgen_name("orbital_canvas_free_rgba")
 func orbital_canvas_free_rgba(_ pixels: UnsafeMutablePointer<UInt8>, _ len: Int)
 
+@_silgen_name("orbital_canvas_decode_data_url")
+func orbital_canvas_decode_data_url(
+    _ url: UnsafePointer<CChar>,
+    _ outBytes: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>,
+    _ outLen: UnsafeMutablePointer<Int>,
+    _ outMime: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
+) -> Int32
+
+/// 1 when an image from `url` with the declared `contentType` decodes as SVG (the canvas asset rule).
+@_silgen_name("orbital_canvas_asset_is_svg")
+func orbital_canvas_asset_is_svg(_ url: UnsafePointer<CChar>, _ contentType: UnsafePointer<CChar>?) -> Int32
+
+@_silgen_name("orbital_canvas_svg_size")
+func orbital_canvas_svg_size(
+    _ key: UnsafePointer<CChar>,
+    _ bytes: UnsafePointer<UInt8>,
+    _ len: Int,
+    _ outWidth: UnsafeMutablePointer<UInt32>,
+    _ outHeight: UnsafeMutablePointer<UInt32>
+) -> Int32
+
+@_silgen_name("orbital_canvas_svg_rasterize")
+func orbital_canvas_svg_rasterize(
+    _ key: UnsafePointer<CChar>,
+    _ bytes: UnsafePointer<UInt8>,
+    _ len: Int,
+    _ scale: Float,
+    _ maxDim: UInt32,
+    _ outWidth: UnsafeMutablePointer<UInt32>,
+    _ outHeight: UnsafeMutablePointer<UInt32>,
+    _ outPixels: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>,
+    _ outLen: UnsafeMutablePointer<Int>
+) -> Int32
+
+/// SVG images for the image atom, parsed and rasterized by orbital-canvas.
+enum OrbitalSvg {
+    /// A `data:` URL's bytes and declared mime type, decoded by the canvas asset loader.
+    static func decodeDataURL(_ url: String) -> (data: Data, mime: String?)? {
+        var bytes: UnsafeMutablePointer<UInt8>?
+        var length = 0
+        var mime: UnsafeMutablePointer<CChar>?
+        guard url.withCString({ orbital_canvas_decode_data_url($0, &bytes, &length, &mime) }) == 1 else {
+            NSLog("[OrbitalSvg] data url refused (%@)", lastError())
+            return nil
+        }
+        defer {
+            if let bytes { orbital_canvas_free_rgba(bytes, length) }
+            if let mime { orbital_canvas_free_string(mime) }
+        }
+        return (bytes.map { Data(bytes: $0, count: length) } ?? Data(), mime.map { String(cString: $0) })
+    }
+
+    static func isSvg(url: String, contentType: String?) -> Bool {
+        url.withCString { u in
+            if let contentType {
+                return contentType.withCString { orbital_canvas_asset_is_svg(u, $0) } == 1
+            }
+            return orbital_canvas_asset_is_svg(u, nil) == 1
+        }
+    }
+
+    static func intrinsicSize(key: String, data: Data) -> CGSize? {
+        var w: UInt32 = 0
+        var h: UInt32 = 0
+        let ok = key.withCString { k in
+            data.withUnsafeBytes { buf in
+                orbital_canvas_svg_size(k, buf.bindMemory(to: UInt8.self).baseAddress!, data.count, &w, &h)
+            }
+        }
+        guard ok == 1 else {
+            NSLog("[OrbitalSvg] refused (%@): %@", lastError(), key)
+            return nil
+        }
+        return CGSize(width: CGFloat(w), height: CGFloat(h))
+    }
+
+    private static func lastError() -> String {
+        guard let p = orbital_canvas_last_error(nil) else { return "" }
+        defer { orbital_canvas_free_string(p) }
+        return String(cString: p)
+    }
+
+    /// `pixelsPerUnit` device pixels per SVG unit; the image keeps the SVG's intrinsic point size.
+    static func image(key: String, data: Data, pixelsPerUnit: CGFloat) -> UIImage? {
+        guard !data.isEmpty, let intrinsic = intrinsicSize(key: key, data: data) else { return nil }
+        var w: UInt32 = 0
+        var h: UInt32 = 0
+        var pixels: UnsafeMutablePointer<UInt8>?
+        var length = 0
+        let ok = key.withCString { k in
+            data.withUnsafeBytes { buf in
+                orbital_canvas_svg_rasterize(k, buf.bindMemory(to: UInt8.self).baseAddress!, data.count, Float(pixelsPerUnit), 4096, &w, &h, &pixels, &length)
+            }
+        }
+        guard ok == 1, let raw = pixels else {
+            NSLog("[OrbitalSvg] refused (%@): %@", lastError(), key)
+            return nil
+        }
+        defer { orbital_canvas_free_rgba(raw, length) }
+        let width = Int(w)
+        let height = Int(h)
+        guard let provider = CGDataProvider(data: Data(bytes: raw, count: length) as CFData),
+              let cg = CGImage(
+                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue),
+                provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent
+              ) else { return nil }
+        return UIImage(cgImage: cg, scale: CGFloat(width) / intrinsic.width, orientation: .up)
+    }
+}
+
 @_silgen_name("orbital_canvas_free_string")
 func orbital_canvas_free_string(_ s: UnsafeMutablePointer<CChar>)
 

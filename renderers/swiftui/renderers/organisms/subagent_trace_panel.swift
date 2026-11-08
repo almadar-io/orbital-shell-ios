@@ -271,7 +271,7 @@ struct AtomTraceScroll<Content: View>: View {
         ViewThatFits(in: .vertical) {
             content
             ScrollViewReader { proxy in
-                ScrollView {
+                AlmadarBoundedScrollView {
                     VStack(spacing: 0) {
                         content
                         Spacer(minLength: 0).frame(height: 0).id("trace-end")
@@ -792,7 +792,7 @@ struct SubagentTracePanelOrganismView: View {
                 ModalMoleculeView(
                     props: ["isOpen": true, "title": .string(AtomTrace.timelineLabel(entry.source, entry.data) + (time.map { " · " + $0 } ?? "")), "size": "lg", "closeEvent": .string(AtomKit.localEvent), "local": true],
                     onEvent: { _, _ in selected = nil },
-                    content: AnyView(ScrollView { AtomTraceDetail(entry: entry, onEvent: onEvent) })
+                    content: AnyView(AlmadarBoundedScrollView { AtomTraceDetail(entry: entry, onEvent: onEvent) })
                 )
                 .padding(theme.density.spacing.space4)
             }
@@ -844,7 +844,7 @@ struct SubagentTracePanelOrganismView: View {
             if items.isEmpty {
                 centered("No agent activity yet")
             } else {
-                ScrollView {
+                AlmadarBoundedScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(items.indices, id: \.self) { index in
                             timelineRow(items[index], last: index == items.count - 1)

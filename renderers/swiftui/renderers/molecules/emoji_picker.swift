@@ -51,7 +51,7 @@ struct EmojiPickerMoleculeView: View {
                 modifier: nil,
                 onEvent: { _, envelope in query = envelope?.dictValue?["actionPayload"]?.dictValue?["value"]?.stringValue ?? "" }
             )
-            ScrollView {
+            AlmadarBoundedScrollView {
                 LazyVStack(alignment: .leading, spacing: theme.density.spacing.space2) {
                     ForEach(0..<groups.count, id: \.self) { index in
                         let group = groups[index]

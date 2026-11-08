@@ -17,6 +17,84 @@ extension EnvironmentValues {
     }
 }
 
+/// True for the direct children of a horizontal stack, the only place `flex-shrink` has a width to hold.
+private struct AlmadarInFlexRowKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var almadarInFlexRow: Bool {
+        get { self[AlmadarInFlexRowKey.self] }
+        set { self[AlmadarInFlexRowKey.self] = newValue }
+    }
+}
+
+/// A flex row's width comes from its parent, as in CSS: it reports at most the width it is offered and children that
+/// do not shrink overflow past its edge instead of widening every ancestor.
+struct AtomRowBound: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let size = subviews.first?.sizeThatFits(proposal) ?? .zero
+        return CGSize(width: proposal.width.map { min(size.width, $0) } ?? size.width, height: size.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(width: proposal.width, height: bounds.height))
+    }
+}
+
+/// The page viewport's height while a page scrolls like the web document; nil outside a page.
+private struct AlmadarPageHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat? = nil
+}
+
+extension EnvironmentValues {
+    var almadarPageHeight: CGFloat? {
+        get { self[AlmadarPageHeightKey.self] }
+        set { self[AlmadarPageHeightKey.self] = newValue }
+    }
+}
+
+/// A scrolling child of a scrolling page stops at the viewport's height and scrolls itself, like a web list with
+/// `max-h-screen`: an unbounded height proposal becomes the page height.
+struct AlmadarPageBound: Layout {
+    let pageHeight: CGFloat?
+
+    private func bounded(_ proposal: ProposedViewSize) -> ProposedViewSize {
+        guard let page = pageHeight else { return proposal }
+        let height = proposal.height.map { $0.isFinite ? min($0, page) : page } ?? page
+        return ProposedViewSize(width: proposal.width, height: height)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(bounded(proposal)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
+    }
+}
+
+private struct AlmadarPageBounded: ViewModifier {
+    @Environment(\.almadarPageHeight) private var pageHeight
+
+    func body(content: Content) -> some View {
+        AlmadarPageBound(pageHeight: pageHeight) { content }
+    }
+}
+
+extension View {
+    func almadarPageBounded() -> some View { modifier(AlmadarPageBounded()) }
+}
+
+/// A vertical `ScrollView` that, inside a scrolling page, stops at the page's height.
+struct AlmadarBoundedScrollView<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ScrollView { content() }.almadarPageBounded()
+    }
+}
+
 private let almadarClassBreakpoints: [(String, CGFloat)] = [
     ("sm", AlmadarBreakpoints.sm), ("md", AlmadarBreakpoints.md), ("lg", AlmadarBreakpoints.lg),
     ("xl", AlmadarBreakpoints.xl), ("2xl", AlmadarBreakpoints.xxl),
@@ -25,20 +103,39 @@ private let almadarClassBreakpoints: [(String, CGFloat)] = [
 private let almadarDisplayValues: Set<String> =
     ["block", "flex", "grid", "inline", "inline-block", "inline-flex", "inline-grid", "contents", "table"]
 
-/// Whether a node's `className` display utilities show it at `width`: the unprefixed `hidden`/display token first,
-/// then each breakpoint the width reaches, in ascending order (mobile-first, as the web's media queries).
-func almadarClassVisible(_ className: String, at width: CGFloat) -> Bool {
-    var visible = true
+/// Resolves one utility family of a `className` at `width`, mobile-first as the web's media queries: unprefixed
+/// tokens first, then each breakpoint the width reaches, in ascending order; `apply` maps a token to its value.
+func almadarClassResolve<T>(_ className: String, at width: CGFloat, initial: T, _ apply: (String) -> T?) -> T {
+    var value = initial
     let tokens = className.split(separator: " ").map(String.init)
-    func apply(_ token: String) {
-        if token == "hidden" { visible = false } else if almadarDisplayValues.contains(token) { visible = true }
-    }
-    tokens.filter { !$0.contains(":") }.forEach(apply)
+    func take(_ token: String) { if let next = apply(token) { value = next } }
+    tokens.filter { !$0.contains(":") }.forEach(take)
     for (prefix, from) in almadarClassBreakpoints {
         if width < from { break }
-        tokens.filter { $0.hasPrefix(prefix + ":") }.forEach { apply(String($0.dropFirst(prefix.count + 1))) }
+        tokens.filter { $0.hasPrefix(prefix + ":") }.forEach { take(String($0.dropFirst(prefix.count + 1))) }
     }
-    return visible
+    return value
+}
+
+/// Whether a node's `className` display utilities show it at `width`.
+func almadarClassVisible(_ className: String, at width: CGFloat) -> Bool {
+    almadarClassResolve(className, at: width, initial: true) { token in
+        token == "hidden" ? false : (almadarDisplayValues.contains(token) ? true : nil)
+    }
+}
+
+/// Whether `flex-shrink: 0` holds at `width` (`shrink-0`; `shrink` restores shrinking).
+func almadarClassNoShrink(_ className: String, at width: CGFloat) -> Bool {
+    almadarClassResolve(className, at: width, initial: false) { token in
+        token == "shrink-0" ? true : (token == "shrink" ? false : nil)
+    }
+}
+
+/// Whether `white-space: nowrap` holds at `width` (`whitespace-nowrap`; any other `whitespace-*` restores wrapping).
+func almadarClassNoWrap(_ className: String, at width: CGFloat) -> Bool {
+    almadarClassResolve(className, at: width, initial: false) { token in
+        token == "whitespace-nowrap" ? true : (token.hasPrefix("whitespace-") ? false : nil)
+    }
 }
 
 /// Paints `content` only while its `className` display utilities show it at the window width.
@@ -46,9 +143,17 @@ struct AlmadarClassGate: View {
     let className: String
     let content: AnyView
     @Environment(\.almadarWindowWidth) private var width
+    @Environment(\.almadarInFlexRow) private var inFlexRow
 
     var body: some View {
-        if className.isEmpty || almadarClassVisible(className, at: width) { content }
+        if className.isEmpty {
+            content.environment(\.almadarInFlexRow, false)
+        } else if almadarClassVisible(className, at: width) {
+            let gated = content
+                .environment(\.almadarInFlexRow, false)
+                .fixedSize(horizontal: inFlexRow && almadarClassNoShrink(className, at: width), vertical: false)
+            if almadarClassNoWrap(className, at: width) { gated.lineLimit(1) } else { gated }
+        }
     }
 }
 
