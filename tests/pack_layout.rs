@@ -51,6 +51,7 @@ fn the_pack_ships_the_bridge_sources() {
         assert!(pack.source(&format!("bridge/{file}")).is_some(), "pack missing bridge/{file}");
     }
     assert!(pack.source("bridge/tests/OrbitalAuthTests.swift").is_some());
+    assert!(pack.source("bridge/tests/CodeBufferTests.swift").is_some());
 }
 
 #[test]
@@ -77,4 +78,8 @@ fn the_bridge_tests_go_to_the_test_target_only() {
         .find(|f| f.path == "Sources/OrbitalAppTests/OrbitalAuthTests.swift")
         .expect("test target carries OrbitalAuthTests.swift");
     assert!(!tests.content.contains("__APP_MODULE__"));
+    assert!(output
+        .files
+        .iter()
+        .any(|f| f.path == "Sources/OrbitalAppTests/CodeBufferTests.swift"));
 }

@@ -8,13 +8,11 @@ struct HeaderMoleculeView: View {
     let onEvent: (String, AnyCodable?) -> Void
     @Environment(\.almadarTheme) private var theme
     @Environment(\.openURL) private var openURL
-    @State private var menuOpen: Bool
     @State private var query = ""
 
     init(props: AnyCodable, onEvent: @escaping (String, AnyCodable?) -> Void) {
         self.props = props
         self.onEvent = onEvent
-        _menuOpen = State(initialValue: props.bool("isMenuOpen"))
     }
 
     private var look: String { props.string("look", default: "compact-bar") }
@@ -29,10 +27,12 @@ struct HeaderMoleculeView: View {
             VStack(spacing: theme.density.spacing.space0) {
                 HStack(spacing: theme.density.spacing.space3) {
                     if props.bool("showMenuToggle", default: true) {
+                        let open = props.bool("isMenuOpen")
+                        let menuEvent = props.string("onMenuToggle")
                         ButtonRenderer(
-                            props: ["variant": "ghost", "size": "sm", "icon": .string(menuOpen ? "x" : "menu"), "aria-label": .string(menuOpen ? "Close menu" : "Open menu"), "action": "menu-toggle", "local": true],
+                            props: ["variant": "ghost", "size": "sm", "icon": .string(open ? "x" : "menu"), "aria-label": .string(open ? "Close menu" : "Open menu"), "action": .string(menuEvent), "local": .bool(menuEvent.isEmpty)],
                             modifier: nil,
-                            onEvent: { _, _ in menuOpen.toggle() }
+                            onEvent: onEvent
                         )
                     }
                     brand

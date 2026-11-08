@@ -259,10 +259,10 @@ struct CorePatternRegistry {
         return { props, modifier, onEvent in
             let view = inner(props, modifier, onEvent)
             let enter = props.string("enter")
-            if enter.isEmpty || enter == "none" {
-                return AnyView(view.verificationContainer(VerificationIds.pattern(patternName)))
-            }
-            return AnyView(view.modifier(AlmadarNodeEnter(enter: enter, step: props.float("enterDelay"))).verificationContainer(VerificationIds.pattern(patternName)))
+            let tagged = enter.isEmpty || enter == "none"
+                ? AnyView(view.verificationContainer(VerificationIds.pattern(patternName)))
+                : AnyView(view.modifier(AlmadarNodeEnter(enter: enter, step: props.float("enterDelay"))).verificationContainer(VerificationIds.pattern(patternName)))
+            return AnyView(AlmadarClassGate(className: props.string("className"), content: tagged))
         }
     }
 }

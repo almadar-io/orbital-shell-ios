@@ -1,6 +1,56 @@
 import Combine
 import Foundation
 import SwiftUI
+import UIKit
+
+/// The window's width in points: what the web's media queries test. The app root sets it from its own geometry.
+private struct AlmadarWindowWidthKey: EnvironmentKey {
+    static var defaultValue: CGFloat {
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen.bounds.width }.first ?? 0
+    }
+}
+
+extension EnvironmentValues {
+    var almadarWindowWidth: CGFloat {
+        get { self[AlmadarWindowWidthKey.self] }
+        set { self[AlmadarWindowWidthKey.self] = newValue }
+    }
+}
+
+private let almadarClassBreakpoints: [(String, CGFloat)] = [
+    ("sm", AlmadarBreakpoints.sm), ("md", AlmadarBreakpoints.md), ("lg", AlmadarBreakpoints.lg),
+    ("xl", AlmadarBreakpoints.xl), ("2xl", AlmadarBreakpoints.xxl),
+]
+
+private let almadarDisplayValues: Set<String> =
+    ["block", "flex", "grid", "inline", "inline-block", "inline-flex", "inline-grid", "contents", "table"]
+
+/// Whether a node's `className` display utilities show it at `width`: the unprefixed `hidden`/display token first,
+/// then each breakpoint the width reaches, in ascending order (mobile-first, as the web's media queries).
+func almadarClassVisible(_ className: String, at width: CGFloat) -> Bool {
+    var visible = true
+    let tokens = className.split(separator: " ").map(String.init)
+    func apply(_ token: String) {
+        if token == "hidden" { visible = false } else if almadarDisplayValues.contains(token) { visible = true }
+    }
+    tokens.filter { !$0.contains(":") }.forEach(apply)
+    for (prefix, from) in almadarClassBreakpoints {
+        if width < from { break }
+        tokens.filter { $0.hasPrefix(prefix + ":") }.forEach { apply(String($0.dropFirst(prefix.count + 1))) }
+    }
+    return visible
+}
+
+/// Paints `content` only while its `className` display utilities show it at the window width.
+struct AlmadarClassGate: View {
+    let className: String
+    let content: AnyView
+    @Environment(\.almadarWindowWidth) private var width
+
+    var body: some View {
+        if className.isEmpty || almadarClassVisible(className, at: width) { content }
+    }
+}
 
 private struct AlmadarGameOverlayKey: EnvironmentKey {
     static let defaultValue = false

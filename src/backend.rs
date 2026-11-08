@@ -1146,13 +1146,15 @@ final class PatternSnapshotTests: XCTestCase {{
         content,
     });
 
-    files.push(GeneratedFile {
-        path: "Sources/OrbitalAppTests/OrbitalAuthTests.swift".to_string(),
-        content: crate::pack::pack()
-            .source(&format!("{PACK_TESTS_PREFIX}OrbitalAuthTests.swift"))
-            .expect("the pack ships bridge/tests/OrbitalAuthTests.swift")
-            .replace("__APP_MODULE__", &app_module_name),
-    });
+    for name in ["OrbitalAuthTests.swift", "CodeBufferTests.swift"] {
+        files.push(GeneratedFile {
+            path: format!("Sources/OrbitalAppTests/{name}"),
+            content: crate::pack::pack()
+                .source(&format!("{PACK_TESTS_PREFIX}{name}"))
+                .unwrap_or_else(|| panic!("the pack ships bridge/tests/{name}"))
+                .replace("__APP_MODULE__", &app_module_name),
+        });
+    }
 
     files
 }

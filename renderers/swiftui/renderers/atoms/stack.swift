@@ -13,8 +13,13 @@ struct AtomFlowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let placed = arrange(width: bounds.width, subviews: subviews)
         for (index, origin) in placed.origins.enumerated() {
-            subviews[index].place(at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y), proposal: .unspecified)
+            subviews[index].place(at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y), proposal: Self.itemProposal(bounds.width))
         }
+    }
+
+    /// A wrapped item is never wider than its row (the web's flex-wrap): its text wraps instead of overflowing.
+    private static func itemProposal(_ width: CGFloat) -> ProposedViewSize {
+        width.isFinite ? ProposedViewSize(width: width, height: nil) : .unspecified
     }
 
     private func arrange(width: CGFloat, subviews: Subviews) -> (size: CGSize, origins: [CGPoint]) {
@@ -23,7 +28,7 @@ struct AtomFlowLayout: Layout {
         var rowHeight: CGFloat = 0
         var widest: CGFloat = 0
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let size = subview.sizeThatFits(Self.itemProposal(width))
             if cursor.x > 0 && cursor.x + size.width > width {
                 cursor = CGPoint(x: 0, y: cursor.y + rowHeight + spacing)
                 rowHeight = 0

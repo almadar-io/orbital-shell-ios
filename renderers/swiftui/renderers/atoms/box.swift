@@ -20,11 +20,24 @@ struct BoxAtomView: View {
         let outerX = margin("marginX")
         let outerY = margin("marginY")
         let maxWidth = AtomKit.length(props.string("maxWidth"))
+        let nodes = AtomKit.nodes(props, "children")
+        let layers = nodes.filter { $0.string("position") == "absolute" }
+        let flow = nodes.filter { $0.string("position") != "absolute" }
         let content = VStack(alignment: .leading, spacing: theme.density.spacing.space0) {
-            AtomChildren(props: props, key: "children", onEvent: onEvent)
+            ForEach(flow.indices, id: \.self) { index in RenderChild(flow[index], onEvent: onEvent) }
         }
         .padding(.horizontal, horizontal)
         .padding(.vertical, vertical)
+        // An absolute child is a layer behind the flow: it fills the box at `inset-0`, else sits at its start corner.
+        .background(alignment: .topLeading) {
+            ZStack(alignment: .topLeading) {
+                ForEach(layers.indices, id: \.self) { index in
+                    let fills = layers[index].string("className").split(separator: " ").contains("inset-0")
+                    RenderChild(layers[index], onEvent: onEvent)
+                        .frame(maxWidth: fills ? .infinity : nil, maxHeight: fills ? .infinity : nil, alignment: .topLeading)
+                }
+            }
+        }
         .frame(maxWidth: props.bool("fullWidth") ? .infinity : maxWidth, maxHeight: props.bool("fullHeight") ? .infinity : nil, alignment: .topLeading)
         .background(background())
         .clipShape(shape)
