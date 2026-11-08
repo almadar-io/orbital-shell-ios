@@ -26,6 +26,12 @@ func orbital_kernel_init(
     _ clientId: UnsafePointer<CChar>?
 ) -> OrbitalKernelHandleRef?
 
+@_silgen_name("orbital_kernel_init_error")
+func orbital_kernel_init_error() -> UnsafeMutablePointer<CChar>?
+
+@_silgen_name("orbital_language_install")
+func orbital_language_install(_ bundle: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
+
 @_silgen_name("orbital_kernel_destroy")
 func orbital_kernel_destroy(_ handle: OrbitalKernelHandleRef?)
 
@@ -280,6 +286,20 @@ final class OrbitalKernel {
 
     deinit {
         orbital_kernel_destroy(handle)
+    }
+
+    /// Why the last `init` returned nil, from the native side.
+    static var initError: String {
+        guard let ptr = orbital_kernel_init_error() else { return "" }
+        defer { orbital_kernel_free_string(ptr) }
+        return String(cString: ptr)
+    }
+
+    /// Installs the bundled language (`language.json`) before any kernel mounts; nil on success, else the error.
+    static func installLanguage(_ bundleJSON: String) -> String? {
+        guard let ptr = bundleJSON.withCString({ orbital_language_install($0) }) else { return nil }
+        defer { orbital_kernel_free_string(ptr) }
+        return String(cString: ptr)
     }
 
     /// The native side's own last error message, read right after a `nil`/

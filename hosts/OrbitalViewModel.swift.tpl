@@ -300,13 +300,19 @@ class OrbitalViewModel: ObservableObject {
         didStart = true
         let clientId = self.clientId
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let json = OrbitalViewModel.loadResolvedSchemaJSON()
+            let languageError = OrbitalViewModel.loadBundledResource("language").map { OrbitalKernel.installLanguage($0) }
+                ?? "language.json is missing from the app bundle"
+            let json = OrbitalViewModel.loadBundledResource("resolved_schema")
             let kernel = json.flatMap { OrbitalKernel(resolvedSchemaJSON: $0, clientId: clientId) }
+            let initError = kernel == nil ? OrbitalKernel.initError : ""
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                if let languageError = languageError {
+                    OrbitalViewModel.eventLog.error("language install failed: \(languageError, privacy: .public)")
+                }
                 self.kernel = kernel
                 guard let kernel = kernel else {
-                    OrbitalViewModel.eventLog.error("failed to load/mount the kernel from resolved_schema.json")
+                    OrbitalViewModel.eventLog.error("failed to load/mount the kernel from resolved_schema.json: \(initError, privacy: .public)")
                     self.alertMessage = "Failed to load the app's resolved schema"
                     self.isReady = true
                     return
@@ -431,8 +437,8 @@ class OrbitalViewModel: ObservableObject {
         }
     }
 
-    private static func loadResolvedSchemaJSON() -> String? {
-        guard let url = Bundle.main.url(forResource: "resolved_schema", withExtension: "json") else { return nil }
+    private static func loadBundledResource(_ name: String) -> String? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json") else { return nil }
         return try? String(contentsOf: url, encoding: .utf8)
     }
 

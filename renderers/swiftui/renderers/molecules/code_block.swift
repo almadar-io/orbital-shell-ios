@@ -499,7 +499,7 @@ struct CodeBufferView: View {
             .frame(maxHeight: limit)
             .onChange(of: model.cursor) { proxy.scrollTo($0.row) }
         }
-        .focusable()
+        .modifier(CodeBufferFocusable())
         .focused($focused)
         .onChange(of: focused) { isFocused in
             let event = props.string(isFocused ? "onEditorFocus" : "onEditorBlur", default: isFocused ? "EDITOR_FOCUS" : "EDITOR_BLUR")
@@ -593,6 +593,16 @@ struct CodeBufferView: View {
 }
 
 /// Buffer mode: every hardware key press while focused is the program's input, emitted as UI:{onKey} and kept out of the platform.
+struct CodeBufferFocusable: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content.focusable()
+        } else {
+            content
+        }
+    }
+}
+
 struct CodeBufferKeys: ViewModifier {
     let props: AnyCodable
     let onEvent: (String, AnyCodable?) -> Void

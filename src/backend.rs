@@ -81,6 +81,9 @@ pub struct IosBackend {
     /// mounts without a device-side compiler. `None` for callers with no
     /// resolved schema (existing tests/CLI paths), which emit no extra file.
     resolved_schema: Option<OrbitalSchema>,
+    /// The installed language bundle (`language_data::language_bundle_json`), bundled as `language.json`: a
+    /// device has no `node_modules` to read the operator table from.
+    language: Option<String>,
 }
 
 impl IosBackend {
@@ -93,6 +96,12 @@ impl IosBackend {
     /// `resolved_schema.json` into the app bundle's Resources.
     pub fn with_resolved_schema(mut self, schema: OrbitalSchema) -> Self {
         self.resolved_schema = Some(schema);
+        self
+    }
+
+    /// Attach the language bundle so `generate` also emits `language.json` into the app bundle's Resources.
+    pub fn with_language(mut self, language: String) -> Self {
+        self.language = Some(language);
         self
     }
 }
@@ -130,6 +139,12 @@ impl Backend for IosBackend {
         files.push(generate_app_file(module));
         if let Some(schema) = &self.resolved_schema {
             files.push(generate_resolved_schema_file(schema));
+        }
+        if let Some(language) = &self.language {
+            files.push(GeneratedFile {
+                path: "Sources/OrbitalApp/Resources/language.json".to_string(),
+                content: language.clone(),
+            });
         }
 
         if module.entities.is_empty() {
@@ -2506,6 +2521,16 @@ mod tests {
     }
 
     #[test]
+    fn the_language_bundle_ships_as_a_resource_only_when_attached() {
+        let module = OirModule::new("TestApp", "1.0.0");
+        let path = "Sources/OrbitalApp/Resources/language.json";
+        let with = IosBackend::new().with_language("{\"language\":1}".into()).generate(&module);
+        let resource = with.files.iter().find(|f| f.path == path).expect("language.json");
+        assert_eq!(resource.content, "{\"language\":1}");
+        assert!(!IosBackend::new().generate(&module).files.iter().any(|f| f.path == path));
+    }
+
+    #[test]
     fn test_registry_file_contains_fallback_and_known_patterns() {
         let backend = IosBackend::new();
         let module = OirModule::new("TestApp", "1.0.0");
@@ -2739,9 +2764,11 @@ mod tests {
         let module = OirModule::new("TestApp", "1.0.0");
         let content = generate_view_model_file(&module).content;
         assert!(content.contains("DispatchQueue.global(qos: .userInitiated).async"));
-        assert!(content.contains("func loadResolvedSchemaJSON() -> String?"));
-        assert!(content
-            .contains(r#"Bundle.main.url(forResource: "resolved_schema", withExtension: "json")"#));
+        assert!(content.contains("func loadBundledResource(_ name: String) -> String?"));
+        assert!(content.contains(r#"Bundle.main.url(forResource: name, withExtension: "json")"#));
+        let install = content.find(r#"loadBundledResource("language")"#).expect("the bundled language is installed");
+        let mount = content.find(r#"loadBundledResource("resolved_schema")"#).expect("the resolved schema loads");
+        assert!(install < mount, "the language is installed before the kernel mounts");
     }
 
     /// A dispatch only posts a server leg when the kernel actually produced
