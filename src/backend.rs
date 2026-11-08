@@ -488,7 +488,7 @@ fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot) -> String {
     out.push_str("struct ");
     out.push_str(&class_name);
     out.push_str(": Codable {\n");
-    out.push_str("    var id: String\n");
+    out.push_str("    var id: String?\n");
     out.push_str(&fields_out);
 
     out.push_str("\n    enum CodingKeys: String, CodingKey {\n");
@@ -2286,6 +2286,17 @@ mod tests {
         assert!(content.contains("struct PredNot: Codable { var of: Pred }"), "the indirect enum breaks the cycle: {content}");
         assert!(content.contains("struct Query: Codable { var filter: Pred? }"), "control: {content}");
         assert!(content.contains("\nenum Flat: Codable {"), "control: a finite union stays a value enum: {content}");
+    }
+
+    #[test]
+    fn an_entity_id_is_optional_because_a_create_carries_none_until_the_store_mints_it() {
+        let mut entity = OirEntity::new("Ticket");
+        let mut subject = OirField::new("subject", OirType::String);
+        subject.required = true;
+        entity.fields.push(subject);
+        let content = generate_entity(&entity);
+        assert!(content.contains("    var id: String?\n"), "{content}");
+        assert!(content.contains("var subject: String\n"), "control: a required field stays required: {content}");
     }
 
     #[test]
