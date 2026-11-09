@@ -121,6 +121,7 @@ struct KernelEventRequest: Codable {
     var dispatchLog: KernelDispatchLog? = nil
     var mount: [KernelMountSeed]? = nil
     var route: String? = nil
+    var crumb: String? = nil
     var residence: KernelLegResidence? = nil
     var framesSince: UInt64? = nil
     var heldPayload: UInt64? = nil
