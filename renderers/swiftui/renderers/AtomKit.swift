@@ -2956,3 +2956,84 @@ extension AtomKit {
         return key
     }
 }
+
+/// A box's `marquee`: the content moves toward `direction` at `speed` points per second; `loop` repeats it right after
+/// itself, otherwise it passes and starts over; `clip` clips and fades both edges. Under reduced motion it stands still.
+struct AlmadarMarquee<Content: View>: View {
+    let direction: String
+    let speed: CGFloat
+    let clip: Bool
+    let loop: Bool
+    @ViewBuilder let content: () -> Content
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var reading
+    @State private var strip: CGSize = .zero
+    @State private var start = Date()
+
+    var body: some View {
+        if reduceMotion || speed <= 0 {
+            HStack(spacing: 0) { content() }
+                .frame(maxWidth: .infinity)
+                .modifier(AlmadarMarqueeClip(clip: clip, faded: false))
+        } else {
+            AtomRowBound {
+                copy
+                    .onGeometryChange(for: CGSize.self) { $0.size } action: { strip = $0 }
+                    .hidden()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .topLeading) {
+                GeometryReader { geo in
+                    TimelineView(.animation) { timeline in
+                        HStack(spacing: 0) {
+                            copy
+                            if loop { copy.accessibilityHidden(true) }
+                        }
+                        .fixedSize()
+                        .environment(\.layoutDirection, .leftToRight)
+                        .offset(x: offset(at: timeline.date, width: geo.size.width))
+                        .frame(width: geo.size.width, alignment: .leading)
+                    }
+                }
+            }
+            .modifier(AlmadarMarqueeClip(clip: clip, faded: true))
+        }
+    }
+
+    private var copy: some View {
+        HStack(spacing: 0) { content() }.fixedSize().environment(\.layoutDirection, reading)
+    }
+
+    /// Leftward when the strip moves toward a left-hand edge: the reading start in left-to-right text, the end in right-to-left.
+    private func offset(at date: Date, width: CGFloat) -> CGFloat {
+        guard strip.width > 0 else { return 0 }
+        let moved = CGFloat(date.timeIntervalSince(start)) * speed
+        let leftward = (direction == "end") == (reading == .rightToLeft)
+        if loop {
+            let travelled = moved.truncatingRemainder(dividingBy: strip.width)
+            return leftward ? -travelled : travelled - strip.width
+        }
+        let period = strip.width + width
+        return leftward
+            ? width - (moved + width).truncatingRemainder(dividingBy: period)
+            : (moved + strip.width).truncatingRemainder(dividingBy: period) - strip.width
+    }
+}
+
+private struct AlmadarMarqueeClip: ViewModifier {
+    let clip: Bool
+    let faded: Bool
+
+    func body(content: Content) -> some View {
+        if clip && faded {
+            content.clipped().mask(LinearGradient(stops: [
+                .init(color: .clear, location: 0), .init(color: .black, location: 0.08),
+                .init(color: .black, location: 0.92), .init(color: .clear, location: 1),
+            ], startPoint: .leading, endPoint: .trailing))
+        } else if clip {
+            content.clipped()
+        } else {
+            content
+        }
+    }
+}

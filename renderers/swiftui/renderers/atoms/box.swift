@@ -23,8 +23,22 @@ struct BoxAtomView: View {
         let nodes = AtomKit.nodes(props, "children")
         let layers = nodes.filter { $0.string("position") == "absolute" }
         let flow = nodes.filter { $0.string("position") != "absolute" }
-        let content = VStack(alignment: .leading, spacing: theme.density.spacing.space0) {
-            ForEach(flow.indices, id: \.self) { index in RenderChild(flow[index], onEvent: onEvent) }
+        let marquee = props.dictValue?["marquee"]?.dictValue
+        let content = Group {
+            if let marquee {
+                AlmadarMarquee(
+                    direction: marquee["direction"]?.stringValue ?? "start",
+                    speed: CGFloat(marquee["speed"]?.doubleValue ?? 0),
+                    clip: marquee["clip"]?.boolValue ?? false,
+                    loop: marquee["loop"]?.boolValue ?? false
+                ) {
+                    ForEach(flow.indices, id: \.self) { index in RenderChild(flow[index], onEvent: onEvent) }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: theme.density.spacing.space0) {
+                    ForEach(flow.indices, id: \.self) { index in RenderChild(flow[index], onEvent: onEvent) }
+                }
+            }
         }
         .padding(.horizontal, horizontal)
         .padding(.vertical, vertical)
