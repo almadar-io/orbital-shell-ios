@@ -15,6 +15,7 @@ struct CorePatternRegistry {
         "animated-counter": { props, modifier, onEvent in AnimatedCounterRenderer(props: props, modifier: modifier, onEvent: onEvent) },
         "animated-graphic": { props, modifier, onEvent in AnimatedGraphicRenderer(props: props, modifier: modifier, onEvent: onEvent) },
         "animated-reveal": { props, modifier, onEvent in AnimatedRevealRenderer(props: props, modifier: modifier, onEvent: onEvent) },
+        "annotated-media": { props, modifier, onEvent in AnnotatedMediaRenderer(props: props, modifier: modifier, onEvent: onEvent) },
         "aside": { props, modifier, onEvent in AsideRenderer(props: props, modifier: modifier, onEvent: onEvent) },
         "atlas-panel": { props, modifier, onEvent in AtlasPanelRenderer(props: props, modifier: modifier, onEvent: onEvent) },
         "auth-layout": { props, modifier, onEvent in AuthLayoutRenderer(props: props, modifier: modifier, onEvent: onEvent) },
