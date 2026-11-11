@@ -5,7 +5,7 @@ use orbital_core_base::ir::cycle::{CycleRoot, TypeRoot};
 #[cfg(test)]
 use orbital_core_base::ir::OirValue;
 use orbital_core_base::ir::{
-    classify_type, render_default, render_type, OirEntity, OirField, OirModule, OirType,
+    classify_type, render_default, render_type, HoistedTypeNames, OirEntity, OirField, OirModule, OirType,
     TargetLiteralRenderer, TargetTypeRenderer, TypeMappingClass,
 };
 use orbital_core_base::schema::{OrbitalSchema, ServiceDefinition};
@@ -111,11 +111,13 @@ impl Backend for IosBackend {
         let mut files = vec![];
         let mut warnings = vec![];
 
+        let names = hoisted_type_names(module);
         files.push(generate_entities_file(
             &module.distinct_entities(),
             &module.named_types,
+            &names,
         ));
-        files.push(generate_events_file(module));
+        files.push(generate_events_file(module, &names));
         files.push(generate_services_file(&module.services));
         files.push(generate_api_client_file(module));
         files.push(generate_slot_role_file());
@@ -168,9 +170,22 @@ impl Backend for IosBackend {
     }
 }
 
+/// The names `Entities.swift` and `Events.swift` (one Swift module) hoist under, starting from the type names the
+/// program declares: its named types and its entity structs.
+fn hoisted_type_names(module: &OirModule) -> HoistedTypeNames {
+    HoistedTypeNames::new(
+        module
+            .named_types
+            .keys()
+            .map(|name| orbital_core_base::type_compat::type_identifier(name))
+            .chain(module.distinct_entities().iter().map(|e| swift_entity_type(&e.name))),
+    )
+}
+
 fn generate_entities_file(
     entities: &[OirEntity],
     named_types: &std::collections::BTreeMap<String, OirType>,
+    names: &HoistedTypeNames,
 ) -> GeneratedFile {
     let mut content = String::from("import Foundation\n\n");
 
@@ -186,7 +201,7 @@ fn generate_entities_file(
             entities,
             root: TypeRoot::Named(name.clone()),
         };
-        let rendered = render_type(&SwiftRenderer::rooted(&ident, &file_hoisted, &cycle), ty, None);
+        let rendered = render_type(&SwiftRenderer::rooted(&ident, &file_hoisted, names, &cycle), ty, None);
         if rendered != ident {
             file_hoisted.borrow_mut().push(format!("typealias {ident} = {rendered}"));
         }
@@ -204,6 +219,7 @@ fn generate_entities_file(
                 entities,
                 root: TypeRoot::Row(entity.name.clone()),
             },
+            names,
         ));
     }
 
@@ -234,7 +250,7 @@ fn payload_type_local(ty: &OirType, local: &std::collections::BTreeSet<&str>) ->
 
 /// The payload structs of every event a trait declares or emits with a payload, named `<Trait><EVENT>Payload`
 /// as in the TypeScript shell, fields sorted by name.
-fn generate_events_file(module: &OirModule) -> GeneratedFile {
+fn generate_events_file(module: &OirModule, names: &HoistedTypeNames) -> GeneratedFile {
     let mut content = String::from("import Foundation\n\n");
     let local: std::collections::BTreeSet<&str> =
         module.entities.iter().map(|e| e.name.as_str()).collect();
@@ -266,11 +282,7 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
         let mut keys_out = String::new();
         for (name, ty, required) in &fields {
             let (inner, optional) = ty.effective(*required);
-            let swift_type = oir_type_to_swift_with(
-                inner,
-                &format!("{}{}", struct_name, split_to_pascal_case(name)),
-                &hoisted,
-            );
+            let swift_type = oir_type_to_swift_with(inner, &names.child(&struct_name, name), &hoisted, names);
             let ident = sanitize_identifier(&split_to_camel_case(name), SWIFT_KEYWORDS);
             fields_out.push_str(&format!(
                 "    var {ident}: {swift_type}{}\n",
@@ -301,7 +313,7 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
         let mut decode_out = String::new();
         for knob in &knobs {
             let name = &knob.name;
-            let context = format!("{}{}", struct_name, split_to_pascal_case(name));
+            let context = names.child(&struct_name, name);
             let ty = match knob.enum_values.as_ref().filter(|v| !v.is_empty()) {
                 Some(values) => {
                     hoisted.borrow_mut().push(generate_enum(&context, values));
@@ -310,7 +322,7 @@ fn generate_events_file(module: &OirModule) -> GeneratedFile {
                 None => knob.field_type.clone(),
             };
             let (inner, optional) = ty.effective(true);
-            let swift_type = oir_type_to_swift_with(inner, &context, &hoisted);
+            let swift_type = oir_type_to_swift_with(inner, &context, &hoisted, names);
             let default = knob.default.as_ref().and_then(|v| match render_default(&SwiftLiteral, v, inner, None) {
                 Ok(rendered) => rendered,
                 Err(mismatch) => Some(format!("/* {} */", mismatch.marker())),
@@ -425,10 +437,11 @@ fn generate_entity(entity: &OirEntity) -> String {
             entities: std::slice::from_ref(entity),
             root: TypeRoot::Row(entity.name.clone()),
         },
+        &HoistedTypeNames::default(),
     )
 }
 
-fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot) -> String {
+fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot, names: &HoistedTypeNames) -> String {
     let mut out = String::new();
     let class_name = swift_entity_type(&entity.name);
 
@@ -436,7 +449,7 @@ fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot) -> String {
     for field in &entity.fields {
         if let Some(values) = &field.enum_values {
             if !values.is_empty() {
-                let enum_name = enum_class_name(&class_name, &field.name);
+                let enum_name = names.child(&class_name, &field.name);
                 out.push_str(&generate_enum(&enum_name, values));
                 out.push('\n');
             }
@@ -448,11 +461,12 @@ fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot) -> String {
 
     for field in entity.fields.iter().filter(|f| f.name != "id") {
         let field_name = sanitize_identifier(&split_to_camel_case(&field.name), SWIFT_KEYWORDS);
-        let (type_hint, optional) = type_for_field(entity, field);
+        let (type_hint, optional) = type_for_field(entity, field, names);
         let swift_type = render_type(
             &SwiftRenderer::rooted(
-                &format!("{}{}", class_name, split_to_pascal_case(&field.name)),
+                &names.child(&class_name, &field.name),
                 &hoisted,
+                names,
                 cycle,
             ),
             &type_hint,
@@ -524,8 +538,9 @@ fn oir_type_to_swift_with(
     type_: &OirType,
     context_name: &str,
     hoisted: &std::cell::RefCell<Vec<String>>,
+    names: &HoistedTypeNames,
 ) -> String {
-    render_type(&SwiftRenderer::new(context_name, hoisted), type_, None)
+    render_type(&SwiftRenderer::new(context_name, hoisted, names), type_, None)
 }
 
 fn swift_enum_member(member: &str) -> String {
@@ -1523,19 +1538,15 @@ fn generate_resolved_schema_file(schema: &OrbitalSchema) -> GeneratedFile {
 /// single owner of optionality (unwraps exactly one `Optional` layer, or
 /// falls back to `!required` — the two spellings collapse to one flag), then
 /// the enum-name override applies on top.
-fn type_for_field(entity: &OirEntity, field: &OirField) -> (OirType, bool) {
+fn type_for_field(entity: &OirEntity, field: &OirField, names: &HoistedTypeNames) -> (OirType, bool) {
     let (effective_ty, optional) = field.effective_type();
     let type_hint = if field.enum_values.is_some() {
-        let enum_name = enum_class_name(&swift_entity_type(&entity.name), &field.name);
+        let enum_name = names.child(&swift_entity_type(&entity.name), &field.name);
         OirType::Enum { name: enum_name }
     } else {
         effective_ty.clone()
     };
     (type_hint, optional)
-}
-
-fn enum_class_name(entity_name: &str, field_name: &str) -> String {
-    format!("{}{}", entity_name, split_to_pascal_case(field_name))
 }
 
 /// The Swift leaf-renderer behind the shared `orbital_core` walker
@@ -1550,20 +1561,26 @@ fn enum_class_name(entity_name: &str, field_name: &str) -> String {
 struct SwiftRenderer<'a> {
     context_name: String,
     hoisted: &'a std::cell::RefCell<Vec<String>>,
+    names: &'a HoistedTypeNames,
     cycle: Option<&'a CycleRoot<'a>>,
 }
 
 impl<'a> SwiftRenderer<'a> {
-    fn new(context_name: &str, hoisted: &'a std::cell::RefCell<Vec<String>>) -> Self {
-        Self { context_name: context_name.to_string(), hoisted, cycle: None }
+    fn new(context_name: &str, hoisted: &'a std::cell::RefCell<Vec<String>>, names: &'a HoistedTypeNames) -> Self {
+        Self { context_name: context_name.to_string(), hoisted, names, cycle: None }
     }
 
-    fn rooted(context_name: &str, hoisted: &'a std::cell::RefCell<Vec<String>>, cycle: &'a CycleRoot<'a>) -> Self {
-        Self { context_name: context_name.to_string(), hoisted, cycle: Some(cycle) }
+    fn rooted(
+        context_name: &str,
+        hoisted: &'a std::cell::RefCell<Vec<String>>,
+        names: &'a HoistedTypeNames,
+        cycle: &'a CycleRoot<'a>,
+    ) -> Self {
+        Self { context_name: context_name.to_string(), hoisted, names, cycle: Some(cycle) }
     }
 
     fn child(&self, context_name: String) -> Self {
-        Self { context_name, hoisted: self.hoisted, cycle: self.cycle }
+        Self { context_name, hoisted: self.hoisted, names: self.names, cycle: self.cycle }
     }
 
     fn reaches_root(&self, ty: &OirType) -> bool {
@@ -1634,7 +1651,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             .iter()
             .map(|f| {
                 let (effective_ty, optional) = f.effective_type();
-                let child = self.child(format!("{}{}", name, split_to_pascal_case(&f.name)));
+                let child = self.child(self.names.child(&name, &f.name));
                 let t = render_type(&child, effective_ty, f.enum_values.as_deref());
                 let t = if self.reaches_root(&f.field_type) { format!("Indirect<{t}>") } else { t };
                 let opt = if optional { "?" } else { "" };
@@ -1665,7 +1682,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
             .iter()
             .map(|v| {
                 let case_name = sanitize_identifier(&orbital_core_base::str_utils::split_to_lower_camel_case(&v.name), SWIFT_KEYWORDS);
-                let variant_name = format!("{}{}", name, split_to_pascal_case(&v.name));
+                let variant_name = self.names.child(&name, &v.name);
                 let child = self.child(variant_name.clone());
                 match &v.field_type {
                     OirType::Struct { fields, additional: _additional } => {
@@ -1673,8 +1690,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
                             .iter()
                             .map(|f| {
                                 let (effective_ty, optional) = f.effective_type();
-                                let grandchild =
-                                    self.child(format!("{}{}", variant_name, split_to_pascal_case(&f.name)));
+                                let grandchild = self.child(self.names.child(&variant_name, &f.name));
                                 let t = render_type(
                                     &grandchild,
                                     effective_ty,
@@ -1818,7 +1834,7 @@ impl TargetTypeRenderer for SwiftRenderer<'_> {
 pub fn classify_oir_type(type_: &OirType) -> TypeMappingClass {
     let hoisted = std::cell::RefCell::new(Vec::new());
     classify_type(
-        &SwiftRenderer::new("Ctx", &hoisted),
+        &SwiftRenderer::new("Ctx", &hoisted, &HoistedTypeNames::default()),
         type_,
         None,
     )
@@ -1828,7 +1844,7 @@ pub fn classify_oir_type(type_: &OirType) -> TypeMappingClass {
 fn oir_type_to_swift(type_: &OirType, context_name: &str) -> String {
     let hoisted = std::cell::RefCell::new(Vec::new());
     render_type(
-        &SwiftRenderer::new(context_name, &hoisted),
+        &SwiftRenderer::new(context_name, &hoisted, &HoistedTypeNames::default()),
         type_,
         None,
     )
@@ -1841,7 +1857,7 @@ fn oir_type_to_swift(type_: &OirType, context_name: &str) -> String {
 fn oir_type_to_swift_hoisted(type_: &OirType, context_name: &str) -> (String, Vec<String>) {
     let hoisted = std::cell::RefCell::new(Vec::new());
     let ty = render_type(
-        &SwiftRenderer::new(context_name, &hoisted),
+        &SwiftRenderer::new(context_name, &hoisted, &HoistedTypeNames::default()),
         type_,
         None,
     );
@@ -3324,7 +3340,7 @@ mod tests {
         let hoisted = std::cell::RefCell::new(Vec::new());
         assert_eq!(
             render_type(
-                &SwiftRenderer::new("Ctx", &hoisted),
+                &SwiftRenderer::new("Ctx", &hoisted, &HoistedTypeNames::default()),
                 &OirType::String,
                 Some(&vals)
             ),
@@ -3332,7 +3348,7 @@ mod tests {
         );
         assert_eq!(
             render_type(
-                &SwiftRenderer::new("Ctx", &hoisted),
+                &SwiftRenderer::new("Ctx", &hoisted, &HoistedTypeNames::default()),
                 &OirType::enum_type("Status"),
                 Some(&vals)
             ),
@@ -4484,13 +4500,70 @@ mod tests {
         assert!(!content.contains("\"a\" | \"b\""), "the literal text is never a type: {content}");
     }
 
+    fn lesson_types(alias: &str) -> OirModule {
+        let mut module = OirModule::new("TestApp", "1.0.0");
+        module.named_types.insert(alias.into(), OirType::Enum { name: "\"a\" | \"b\"".into() });
+        module.named_types.insert(
+            "LessonVisualization".into(),
+            OirType::Struct {
+                fields: vec![
+                    OirField::new("type", OirType::Enum { name: "\"visualization\"".into() }),
+                    OirField::optional("note", OirType::String),
+                ]
+                .into(),
+                additional: None,
+            },
+        );
+        module
+    }
+
+    fn entities_swift(module: &OirModule) -> String {
+        IosBackend::new()
+            .generate(module)
+            .files
+            .into_iter()
+            .find(|f| f.path.ends_with("Entities.swift"))
+            .map(|f| f.content)
+            .expect("Entities.swift")
+    }
+
+    #[test]
+    fn an_inline_field_type_takes_a_name_the_program_does_not_declare() {
+        let content = entities_swift(&lesson_types("LessonVisualizationType"));
+        assert_eq!(content.matches("enum LessonVisualizationType:").count(), 1, "the program's own type keeps its name, once: {content}");
+        assert_eq!(content.matches("enum LessonVisualizationType2:").count(), 1, "{content}");
+        assert!(content.contains("var type: LessonVisualizationType2;"), "the record reads the hoisted name: {content}");
+        let control = entities_swift(&lesson_types("LessonVisualKind"));
+        assert_eq!(control.matches("enum LessonVisualizationType:").count(), 1, "control: a free name is unchanged: {control}");
+        assert!(control.contains("var type: LessonVisualizationType;"), "{control}");
+        assert!(!control.contains("LessonVisualizationType2"), "{control}");
+    }
+
+    #[test]
+    fn an_entity_field_type_takes_a_name_the_program_does_not_declare() {
+        let module = |alias: &str| {
+            let mut module = OirModule::new("TestApp", "1.0.0");
+            module.named_types.insert(alias.into(), OirType::Enum { name: "\"x\" | \"y\"".into() });
+            let mut lesson = OirEntity::new("Lesson");
+            lesson.fields.push(OirField::new("kind", OirType::Enum { name: "\"a\" | \"b\"".into() }));
+            module.entities.push(lesson);
+            module
+        };
+        let content = entities_swift(&module("LessonKind"));
+        assert_eq!(content.matches("enum LessonKind:").count(), 1, "{content}");
+        assert!(content.contains("var kind: LessonKind2"), "{content}");
+        let control = entities_swift(&module("Other"));
+        assert!(control.contains("var kind: LessonKind"), "control: {control}");
+        assert!(!control.contains("LessonKind2"), "control: {control}");
+    }
+
     #[test]
     fn a_union_case_named_like_its_arm_model_does_not_shadow_the_model() {
         let hoisted = std::cell::RefCell::new(Vec::new());
         let union = OirType::Union {
             variants: vec![OirField::new("MatchedText", OirType::TypeRef { name: "MatchedText".into() })].into(),
         };
-        oir_type_to_swift_with(&union, "Matched", &hoisted);
+        oir_type_to_swift_with(&union, "Matched", &hoisted, &HoistedTypeNames::default());
         let decl = hoisted.into_inner().join("\n");
         assert!(decl.contains("case matchedText(MatchedText)"), "{decl}");
         assert!(decl.contains("c.decode(MatchedText.self)"), "the decoder names the model, which no case shadows: {decl}");
