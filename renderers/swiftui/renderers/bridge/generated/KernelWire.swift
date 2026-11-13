@@ -375,4 +375,5 @@ enum KernelTransitionRejectionCode: String, Codable {
     case localeNotDeclared = "locale-not-declared"
     case clientCircuitStateRefused = "client-circuit-state-refused"
     case repaintFailed = "repaint-failed"
+    case cascadeCapped = "cascade-capped"
 }
