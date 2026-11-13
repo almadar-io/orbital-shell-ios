@@ -54,12 +54,13 @@ impl ShellProgram for IosProgram {
             .map_err(|e| ShellFailure::new(CODE_GENERATE_FAILED, format!("load installed language bundle: {e}")))?;
         let backend = crate::IosBackend::new().with_resolved_schema(resolved(request)?).with_language(language);
         let generated = write_project(&request.module, output, &shell, &backend, &request.write)?;
-        let files = written_files(&generated);
+        let files = written_files(&generated, orbital_core_base::shell::Shell::generated_dir(&shell));
         if request.write.copy_template {
             use orbital_core_base::shell::Shell as _;
             let failed = |e: orbital_core_base::shell::ShellError| ShellFailure::new(CODE_GENERATE_FAILED, e.to_string());
             shell.validate_structure(output).map_err(failed)?;
-            shell.validate_generated_layout(output, &files).map_err(failed)?;
+            let logical: Vec<String> = generated.files.iter().map(|f| f.path.clone()).collect();
+            shell.validate_generated_layout(output, &logical).map_err(failed)?;
         }
         Ok(GenerateResponse {
             files,
@@ -83,7 +84,7 @@ fn generate_native_gpu(request: &GenerateRequest, output: &Path) -> Result<Gener
     let shell = crate::native_gpu::NativeGpuShell::new().map_err(|e| ShellFailure::new(CODE_GENERATE_FAILED, e.to_string()))?;
     let generated = write_project(&request.module, output, &shell, &backend, &request.write)?;
     Ok(GenerateResponse {
-        files: written_files(&generated),
+        files: written_files(&generated, orbital_core_base::shell::Shell::generated_dir(&shell)),
         warnings: generated.warnings,
         next_steps: vec![format!("cd {}", output.display()), "./orb-build.sh".to_string()],
     })

@@ -5,7 +5,7 @@ use orbital_core_base::ir::cycle::{CycleRoot, TypeRoot};
 #[cfg(test)]
 use orbital_core_base::ir::OirValue;
 use orbital_core_base::ir::{
-    classify_type, render_default, render_type, HoistedTypeNames, OirEntity, OirField, OirModule, OirType,
+    classify_type, render_default_in, render_type, HoistedTypeNames, OirEntity, OirField, OirModule, OirType,
     TargetLiteralRenderer, TargetTypeRenderer, TypeMappingClass,
 };
 use orbital_core_base::schema::{OrbitalSchema, ServiceDefinition};
@@ -323,7 +323,7 @@ fn generate_events_file(module: &OirModule, names: &HoistedTypeNames) -> Generat
             };
             let (inner, optional) = ty.effective(true);
             let swift_type = oir_type_to_swift_with(inner, &context, &hoisted, names);
-            let default = knob.default.as_ref().and_then(|v| match render_default(&SwiftLiteral, v, inner, None) {
+            let default = knob.default.as_ref().and_then(|v| match render_default_in(&SwiftLiteral, v, inner, None, &module.named_types) {
                 Ok(rendered) => rendered,
                 Err(mismatch) => Some(format!("/* {} */", mismatch.marker())),
             });
@@ -485,7 +485,7 @@ fn generate_entity_in(entity: &OirEntity, cycle: &CycleRoot, names: &HoistedType
             type_hint.clone()
         };
         let default = field.default.as_ref().and_then(|v| {
-            match render_default(&SwiftLiteral, v, &default_ty, None) {
+            match render_default_in(&SwiftLiteral, v, &default_ty, None, cycle.named_types) {
                 Ok(Some(rendered)) if boxed && rendered != "nil" => Some(format!("Indirect({rendered})")),
                 Ok(Some(rendered)) => Some(rendered),
                 Ok(None) => None,
@@ -1921,6 +1921,7 @@ impl TargetLiteralRenderer for SwiftLiteral {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use orbital_core_base::ir::render_default;
     use orbital_core_base::ir::{OirEvent, OirPage, OirState, OirTrait, OirTraitBinding};
 
     #[test]
