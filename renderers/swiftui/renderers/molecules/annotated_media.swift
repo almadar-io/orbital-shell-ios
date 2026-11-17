@@ -26,7 +26,16 @@ struct AnnotatedMediaMoleculeView: View {
 
     var body: some View {
         let title = props.string("title")
-        if props.string("mediaType", default: "image") == "video" {
+        if props.string("mediaType", default: "image") == "content" {
+            BoxRenderer(
+                props: ["fullWidth": true, "children": props.dictValue?["children"] ?? .null],
+                modifier: nil,
+                onEvent: onEvent
+            )
+            .overlay(GeometryReader { proxy in overlay(proxy.size, capturing: props.bool("placing", default: true)) })
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(title)
+        } else if props.string("mediaType", default: "image") == "video" {
             FallbackRendererView(patternName: "annotated-media", props: props, modifier: nil, onEvent: onEvent)
         } else {
             ImageRenderer(
@@ -40,13 +49,15 @@ struct AnnotatedMediaMoleculeView: View {
         }
     }
 
-    private func overlay(_ size: CGSize) -> some View {
+    private func overlay(_ size: CGSize, capturing: Bool = true) -> some View {
         ZStack(alignment: .topLeading) {
-            Rectangle()
-                .fill(AtomKit.clear(theme))
-                .contentShape(Rectangle())
-                .gesture(SpatialTapGesture().onEnded { place($0.location, in: size) })
-                .atomAction(props.string("placeEvent"), props)
+            if capturing {
+                Rectangle()
+                    .fill(AtomKit.clear(theme))
+                    .contentShape(Rectangle())
+                    .gesture(SpatialTapGesture().onEnded { place($0.location, in: size) })
+                    .atomAction(props.string("placeEvent"), props)
+            }
             ForEach(pins, id: \.id) { pin in
                 badge(pin)
                     .position(x: size.width * pin.x / 100, y: size.height * pin.y / 100)

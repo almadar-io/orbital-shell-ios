@@ -11,6 +11,7 @@
   "aria-live": "off",
   "aria-pressed": "true",
   "aria-selected": false,
+  "children": "children",
   "className": "className",
   "dir": "ltr",
   "enter": "none",
