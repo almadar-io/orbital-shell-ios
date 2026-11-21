@@ -31,6 +31,7 @@ struct KernelTupleStringString: Codable, Equatable {
 struct KernelAppliedWire: Codable {
     let applied: [KernelTupleStringString]
     let response: KernelEventResponse
+    let hostPaints: [KernelClientEffectByTrait]
     let serverLegs: [KernelRoutedLeg]
     var resync: KernelFramesResync? = nil
 }
