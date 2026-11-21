@@ -3682,7 +3682,8 @@ mod tests {
         assert!(app
             .contains("if live.count == 1, let only = live.first {\n            traitBody(only)"));
         assert!(app.contains("} else if live.count > 1 {\n            VStack(alignment: .leading, spacing: 24) {\n                ForEach(live, id: \\.self) { traitBody($0) }"));
-        assert!(app.contains("mainBody\n            .modifier(AlmadarSurfaceEnter(shape: \"pageEnter\", timing: .page, replayKey: pageName))\n            .verificationContainer(mainSlotId)"));
+        assert!(app.contains("ScrollView {\n                mainBody\n"));
+        assert!(app.contains(".environment(\\.almadarPageHeight, viewport.size.height)\n        }\n            .modifier(AlmadarSurfaceEnter(shape: \"pageEnter\", timing: .page, replayKey: pageName))\n            .verificationContainer(mainSlotId)"));
         // the theme motion: each writer plays the slot entry, the toast slot its surface shape
         assert!(app.contains("renderSlot(spliced)\n                .modifier(AlmadarSlotEnter(content: spliced, contentKey: key))"));
         assert!(app.contains("AlmadarSurfaceEnter(shape: role == .toast ? \"toastEnter\" : nil, timing: .toast"));
