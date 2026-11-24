@@ -211,6 +211,10 @@ pub struct NativeGpuBackend {
     program: String,
     language: String,
     host: String,
+    /// Each lazy page's program (EXEC-LOAD-2) and its file beside `program.orb`.
+    lazy: Vec<(String, String)>,
+    /// The remote files the app carries (`bundle-files.json`), which `orb` downloads beside it.
+    bundled: String,
     /// The app's GoogleService-Info.plist, shipped as a resource when sign-in is compiled in.
     firebase_config: Option<String>,
 }
@@ -220,9 +224,17 @@ impl NativeGpuBackend {
         schema: &OrbitalSchema,
         language: String,
         backend_url: Option<&str>,
+        lazy: &[orbital_core_base::shell_protocol::LazyProgram],
     ) -> Result<Self, serde_json::Error> {
-        let value = serde_json::to_value(schema)?;
-        let program = serde_json::to_string(&orbital_core_eval::util::canonical_json(&value))?;
+        let canonical = |schema: &OrbitalSchema| -> Result<String, serde_json::Error> {
+            serde_json::to_string(&orbital_core_eval::util::canonical_json(&serde_json::to_value(schema)?))
+        };
+        let program = canonical(schema)?;
+        let lazy = lazy
+            .iter()
+            .map(|page| Ok((page.orb_ref.clone(), canonical(&page.program)?)))
+            .collect::<Result<Vec<_>, serde_json::Error>>()?;
+        let bundled = orbital_core_base::native_bundle::BundledFiles::theme_fonts(schema);
         let host = match backend_url {
             Some(url) => serde_json::json!({ "mode": "server", "backendUrl": url }),
             None => serde_json::json!({ "mode": "embedded" }),
@@ -231,6 +243,8 @@ impl NativeGpuBackend {
             program,
             language,
             host: serde_json::to_string(&host)?,
+            lazy,
+            bundled: serde_json::to_string(&bundled)?,
             firebase_config: None,
         })
     }
@@ -252,7 +266,9 @@ impl Backend for NativeGpuBackend {
             GeneratedFile::new("program.orb", self.program.clone()),
             GeneratedFile::new("language.json", self.language.clone()),
             GeneratedFile::new("native-host.json", self.host.clone()),
+            GeneratedFile::new(orbital_core_base::native_bundle::BUNDLED_FILES, self.bundled.clone()),
         ];
+        files.extend(self.lazy.iter().map(|(orb_ref, program)| GeneratedFile::new(orb_ref.clone(), program.clone())));
         if let Some(plist) = &self.firebase_config {
             files.push(GeneratedFile::new("GoogleService-Info.plist", plist.clone()));
         }
@@ -324,12 +340,14 @@ mod tests {
             program: "{}".into(),
             language: "{}".into(),
             host: r#"{"mode":"embedded"}"#.into(),
+            lazy: Vec::new(),
+            bundled: r#"{"files":[]}"#.into(),
             firebase_config: None,
         };
         let files = backend.generate(&OirModule::new("test", "1.0.0")).files;
         assert_eq!(
             files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>(),
-            ["program.orb", "language.json", "native-host.json"]
+            ["program.orb", "language.json", "native-host.json", "bundle-files.json"]
         );
         std::fs::remove_dir_all(root).unwrap();
     }
@@ -366,6 +384,32 @@ mod tests {
         assert!(!project.contains("{{"), "control: every placeholder is filled: {project}");
         assert!(project.contains("- path: OrbitalSignInOff.m") && !project.contains("packages:") && !project.contains("GoogleService-Info.plist"), "control: no config, no SDK: {project}");
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    /// Lazy pages ship beside `program.orb` and the theme's font files are listed for `orb` to download, as the
+    /// Android shell does; the project copies both folders into the app when they exist.
+    #[test]
+    fn lazy_pages_and_carried_fonts_ship_in_the_bundle_and_the_project_copies_them() {
+        let program = |type_scale: &str, page: &str| -> OrbitalSchema {
+            orbital_core_base::json_value::from_json_str::<OrbitalSchema>(&format!(
+                r#"{{"name":"App","typeContractVersion":1,"theme":{{"name":"t","tokens":{{"typeScale":{type_scale}}}}},"orbitals":[{{"name":"Home","entity":{{"name":"Row","fields":[{{"name":"id","type":"string"}}]}},"traits":[],"pages":[{{"name":"{page}","path":"/","traits":[]}}]}}]}}"#
+            ))
+            .unwrap()
+        };
+        let home = program(r#"{"bodyFile":"https://fonts.test/Body.ttf"}"#, "HomePage");
+        let lazy = vec![orbital_core_base::shell_protocol::LazyProgram { orb_ref: "lazy/BlogEN.orb".into(), program: program("{}", "BlogPage") }];
+        let files = NativeGpuBackend::new(&home, "{}".into(), None, &lazy).unwrap().generate(&OirModule::new("test", "1.0.0")).files;
+        assert!(files.iter().any(|f| f.path == "lazy/BlogEN.orb" && f.content.contains("BlogPage")));
+        let listed = files.iter().find(|f| f.path == "bundle-files.json").expect("bundle-files.json");
+        let listed: orbital_core_base::native_bundle::BundledFiles = orbital_core_base::json_value::from_json_str(&listed.content).unwrap();
+        assert_eq!(listed.files.iter().map(|f| (f.url.as_str(), f.path.as_str())).collect::<Vec<_>>(), [("https://fonts.test/Body.ttf", "fonts/0")]);
+        let plain = NativeGpuBackend::new(&program("{}", "HomePage"), "{}".into(), None, &[]).unwrap().generate(&OirModule::new("test", "1.0.0")).files;
+        assert_eq!(plain.len(), 4, "control: no lazy page, no font file, the four bundle files");
+        let project = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("renderers/native/template/project.yml")).unwrap();
+        for folder in ["lazy", "fonts"] {
+            assert!(project.contains(&format!("- path: {folder}\n        type: folder\n        optional: true\n        buildPhase: resources")), "{folder}: {project}");
+        }
+        assert!(project.contains("- path: bundle-files.json\n        buildPhase: resources"), "{project}");
     }
 
     #[test]

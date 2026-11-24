@@ -11,6 +11,7 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
+native-audio = ["orbital-client-dioxus/native-audio"]
 research-video = ["orbital-client-dioxus/research-video"]
 
 [dependencies]

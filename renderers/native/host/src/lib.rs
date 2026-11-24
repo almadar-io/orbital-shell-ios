@@ -38,11 +38,19 @@ pub extern "C" fn orbital_native_ios_main() {
     )
     .expect("native-host.json contract");
     let program = orbital_core::schema::parse_schema(&program).expect("bundled program.orb");
+    let bundled = std::fs::read_to_string(bundle_file(orbital_core::native_bundle::BUNDLED_FILES))
+        .expect("bundled bundle-files.json");
+    orbital_client_dioxus::native::register_bundled_files(&bundled, |path| {
+        std::fs::read(bundle_file(path)).map_err(|e| e.to_string())
+    })
+    .expect("bundled files");
+    let lazy: std::sync::Arc<dyn orbital_core::runtime::LazySource> =
+        std::sync::Arc::new(orbital_core::runtime::FileLazySource::beside(&bundle_file("program.orb")));
     let css = orbital_client_dioxus::styles::program_stylesheets(&program);
     match host {
-        NativeHost::Embedded => orbital_client_dioxus::native::start(program, None, css, "Native App"),
+        NativeHost::Embedded => orbital_client_dioxus::native::start(program, Some(lazy), css, "Native App"),
         NativeHost::Server { backend_url } => {
-            orbital_client_dioxus::native::start_server(program, &backend_url, None, css, "Native App")
+            orbital_client_dioxus::native::start_server(program, &backend_url, Some(lazy), css, "Native App")
         }
     }
     .expect("native GPU mount");

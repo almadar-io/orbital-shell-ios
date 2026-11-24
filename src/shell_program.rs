@@ -97,7 +97,7 @@ fn generate_native_gpu(request: &GenerateRequest, output: &Path) -> Result<Gener
         }
         _ => return Err(ShellFailure::new(CODE_BAD_REQUEST, "firebaseConfig must be a file path")),
     };
-    let backend = crate::native_gpu::NativeGpuBackend::new(&schema, language, backend_url)
+    let backend = crate::native_gpu::NativeGpuBackend::new(&schema, language, backend_url, &request.lazy)
         .map_err(|e| ShellFailure::new(CODE_GENERATE_FAILED, format!("serialize resolved program: {e}")))?;
     let shell = crate::native_gpu::NativeGpuShell::new().map_err(|e| ShellFailure::new(CODE_GENERATE_FAILED, e.to_string()))?;
     let (backend, shell) = match firebase_config {

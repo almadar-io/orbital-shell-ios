@@ -15,6 +15,16 @@ name: {{APP_NAME}}
         buildPhase: resources
       - path: native-host.json
         buildPhase: resources
+      - path: bundle-files.json
+        buildPhase: resources
+      - path: lazy
+        type: folder
+        optional: true
+        buildPhase: resources
+      - path: fonts
+        type: folder
+        optional: true
+        buildPhase: resources
 {{SIGN_IN_DEPENDENCIES}}    settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: {{APP_PACKAGE}}
