@@ -1,5 +1,5 @@
 name: {{APP_NAME}}
-targets:
+{{SIGN_IN_PACKAGES}}targets:
   {{APP_NAME}}:
     type: application
     platform: iOS
@@ -8,13 +8,14 @@ targets:
       - path: main.c
       - path: OrbitalVideoOverlay.m
       - path: OrbitalMotion.m
-      - path: program.orb
+      - path: {{SIGN_IN_SOURCE}}
+{{SIGN_IN_RESOURCES}}      - path: program.orb
         buildPhase: resources
       - path: language.json
         buildPhase: resources
       - path: native-host.json
         buildPhase: resources
-    settings:
+{{SIGN_IN_DEPENDENCIES}}    settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: {{APP_PACKAGE}}
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -27,5 +28,6 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: "{{APP_TITLE}}"
+{{SIGN_IN_URL_TYPES}}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

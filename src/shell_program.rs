@@ -35,6 +35,12 @@ impl ShellProgram for IosProgram {
                     values: None,
                     default: None,
                 },
+                ShellOption {
+                    name: "firebaseConfig".into(),
+                    description: "Path to the app's GoogleService-Info.plist; compiles Google sign-in into the native GPU app".into(),
+                    values: None,
+                    default: None,
+                },
             ],
         )
     }
@@ -79,9 +85,25 @@ fn generate_native_gpu(request: &GenerateRequest, output: &Path) -> Result<Gener
         Some(serde_json::Value::String(url)) if is_http_url(url) => Some(url.as_str()),
         _ => return Err(ShellFailure::new(CODE_BAD_REQUEST, "backendUrl must be an HTTP(S) URL")),
     };
+    let firebase_config = match request.options.get("firebaseConfig") {
+        None => None,
+        Some(serde_json::Value::String(path)) => {
+            let plist = std::fs::read_to_string(path)
+                .map_err(|e| ShellFailure::new(CODE_BAD_REQUEST, format!("firebaseConfig {path}: {e}")))?;
+            let scheme = crate::native_gpu::reversed_client_id(&plist).ok_or_else(|| {
+                ShellFailure::new(CODE_BAD_REQUEST, format!("firebaseConfig {path} names no REVERSED_CLIENT_ID (is it a GoogleService-Info.plist?)"))
+            })?;
+            Some((plist, scheme))
+        }
+        _ => return Err(ShellFailure::new(CODE_BAD_REQUEST, "firebaseConfig must be a file path")),
+    };
     let backend = crate::native_gpu::NativeGpuBackend::new(&schema, language, backend_url)
         .map_err(|e| ShellFailure::new(CODE_GENERATE_FAILED, format!("serialize resolved program: {e}")))?;
     let shell = crate::native_gpu::NativeGpuShell::new().map_err(|e| ShellFailure::new(CODE_GENERATE_FAILED, e.to_string()))?;
+    let (backend, shell) = match firebase_config {
+        Some((plist, scheme)) => (backend.with_firebase_config(plist), shell.with_sign_in(scheme)),
+        None => (backend, shell),
+    };
     let generated = write_project(&request.module, output, &shell, &backend, &request.write)?;
     Ok(GenerateResponse {
         files: written_files(&generated, orbital_core_base::shell::Shell::generated_dir(&shell)),

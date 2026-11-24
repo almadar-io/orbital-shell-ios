@@ -30,6 +30,8 @@ pub struct NativeGpuShell {
     template: PathBuf,
     bundle: PathBuf,
     research: bool,
+    /// The app's reversed Google client id when it is built with a Firebase config: sign-in is compiled in.
+    sign_in: Option<String>,
 }
 
 impl NativeGpuShell {
@@ -49,6 +51,7 @@ impl NativeGpuShell {
                 template: Path::new(env!("CARGO_MANIFEST_DIR")).join("renderers/native/template"),
                 bundle: PathBuf::from(bundle),
                 research,
+                sign_in: None,
             });
         }
         let executable = std::env::current_exe()?;
@@ -68,6 +71,7 @@ impl NativeGpuShell {
             template: package.join("templates/ios-native-gpu"),
             bundle: package.join("native-gpu/ios"),
             research: false,
+            sign_in: None,
         }
     }
 
@@ -152,6 +156,9 @@ impl Shell for NativeGpuShell {
         let mut replacements = crate::shell::build_replacements(project_name);
         replacements.insert("{{NATIVE_GPU_MIN_IOS}}", contract.min_ios.clone());
         replacements.insert("{{NATIVE_GPU_LIBRARY}}", contract.library.clone());
+        for (placeholder, value) in sign_in_replacements(self.sign_in.as_deref()) {
+            replacements.insert(placeholder, value);
+        }
         crate::shell::replace_placeholders_in_dir(output, &replacements)?;
         for (target, library) in libraries {
             let destination = output.join("lib").join(target);
@@ -162,10 +169,50 @@ impl Shell for NativeGpuShell {
     }
 }
 
+/// The project.yml fragments that compile sign-in in (Firebase Auth + GoogleSignIn, the plist, the URL scheme the
+/// Google redirect returns on), or the stub that refuses every sign-in ask.
+fn sign_in_replacements(reversed_client_id: Option<&str>) -> [(&'static str, String); 5] {
+    match reversed_client_id {
+        Some(scheme) => [
+            ("{{SIGN_IN_PACKAGES}}", "packages:\n  Firebase:\n    url: https://github.com/firebase/firebase-ios-sdk\n    from: 11.6.0\n  GoogleSignIn:\n    url: https://github.com/google/GoogleSignIn-iOS\n    from: 8.0.0\n".to_string()),
+            ("{{SIGN_IN_SOURCE}}", "OrbitalSignIn.m".to_string()),
+            ("{{SIGN_IN_RESOURCES}}", "      - path: GoogleService-Info.plist\n        buildPhase: resources\n".to_string()),
+            ("{{SIGN_IN_DEPENDENCIES}}", "    dependencies:\n      - package: Firebase\n        product: FirebaseCore\n      - package: Firebase\n        product: FirebaseAuth\n      - package: GoogleSignIn\n        product: GoogleSignIn\n".to_string()),
+            ("{{SIGN_IN_URL_TYPES}}", format!("        CFBundleURLTypes:\n          - CFBundleURLSchemes:\n              - {scheme}\n")),
+        ],
+        None => [
+            ("{{SIGN_IN_PACKAGES}}", String::new()),
+            ("{{SIGN_IN_SOURCE}}", "OrbitalSignInOff.m".to_string()),
+            ("{{SIGN_IN_RESOURCES}}", String::new()),
+            ("{{SIGN_IN_DEPENDENCIES}}", String::new()),
+            ("{{SIGN_IN_URL_TYPES}}", String::new()),
+        ],
+    }
+}
+
+/// The `REVERSED_CLIENT_ID` a GoogleService-Info.plist names: the URL scheme Google sign-in returns on.
+pub fn reversed_client_id(plist: &str) -> Option<String> {
+    let after_key = &plist[plist.find("<key>REVERSED_CLIENT_ID</key>")? + "<key>REVERSED_CLIENT_ID</key>".len()..];
+    let start = after_key.find("<string>")? + "<string>".len();
+    let end = after_key[start..].find("</string>")? + start;
+    let value = after_key[start..end].trim();
+    (!value.is_empty()).then(|| value.to_string())
+}
+
+impl NativeGpuShell {
+    /// Compile sign-in in for an app whose Firebase config names `reversed_client_id`.
+    pub fn with_sign_in(mut self, reversed_client_id: String) -> Self {
+        self.sign_in = Some(reversed_client_id);
+        self
+    }
+}
+
 pub struct NativeGpuBackend {
     program: String,
     language: String,
     host: String,
+    /// The app's GoogleService-Info.plist, shipped as a resource when sign-in is compiled in.
+    firebase_config: Option<String>,
 }
 
 impl NativeGpuBackend {
@@ -184,7 +231,14 @@ impl NativeGpuBackend {
             program,
             language,
             host: serde_json::to_string(&host)?,
+            firebase_config: None,
         })
+    }
+
+    /// Ship `plist` as the app's GoogleService-Info.plist.
+    pub fn with_firebase_config(mut self, plist: String) -> Self {
+        self.firebase_config = Some(plist);
+        self
     }
 }
 
@@ -194,14 +248,15 @@ impl Backend for NativeGpuBackend {
     }
 
     fn generate(&self, _module: &OirModule) -> GeneratedOutput {
-        GeneratedOutput {
-            files: vec![
-                GeneratedFile::new("program.orb", self.program.clone()),
-                GeneratedFile::new("language.json", self.language.clone()),
-                GeneratedFile::new("native-host.json", self.host.clone()),
-            ],
-            warnings: Vec::new(),
+        let mut files = vec![
+            GeneratedFile::new("program.orb", self.program.clone()),
+            GeneratedFile::new("language.json", self.language.clone()),
+            GeneratedFile::new("native-host.json", self.host.clone()),
+        ];
+        if let Some(plist) = &self.firebase_config {
+            files.push(GeneratedFile::new("GoogleService-Info.plist", plist.clone()));
         }
+        GeneratedOutput { files, warnings: Vec::new() }
     }
 }
 
@@ -269,6 +324,7 @@ mod tests {
             program: "{}".into(),
             language: "{}".into(),
             host: r#"{"mode":"embedded"}"#.into(),
+            firebase_config: None,
         };
         let files = backend.generate(&OirModule::new("test", "1.0.0")).files;
         assert_eq!(
@@ -276,5 +332,46 @@ mod tests {
             ["program.orb", "language.json", "native-host.json"]
         );
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    /// An app built with a Firebase config compiles the real sign-in, its SDK packages, its plist and the reversed
+    /// client id as its URL scheme; one built without compiles the stub and pulls no SDK.
+    #[test]
+    fn a_firebase_config_turns_the_projects_sign_in_on_and_its_absence_keeps_the_stub() {
+        let contract = native_gpu_contract();
+        let root = std::env::temp_dir().join(format!("orbital-ios-sign-in-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let package = root.join("package");
+        write_bundle(&package, &contract.production_feature_set, b"!<arch>\nlibrary");
+        crate::shell::copy_dir_recursive(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("renderers/native/template"),
+            &package.join("templates/ios-native-gpu"),
+        )
+        .unwrap();
+        let signed = root.join("signed");
+        NativeGpuShell::from_package_root(&package)
+            .with_sign_in("com.googleusercontent.apps.123-abc".into())
+            .init_project(&signed, "signed")
+            .unwrap();
+        let project = std::fs::read_to_string(signed.join("project.yml")).unwrap();
+        assert!(!project.contains("{{"), "every placeholder is filled: {project}");
+        assert!(project.contains("- path: OrbitalSignIn.m"), "{project}");
+        assert!(project.contains("https://github.com/firebase/firebase-ios-sdk") && project.contains("product: FirebaseAuth"), "{project}");
+        assert!(project.contains("product: GoogleSignIn"), "{project}");
+        assert!(project.contains("- path: GoogleService-Info.plist"), "{project}");
+        assert!(project.contains("com.googleusercontent.apps.123-abc"), "{project}");
+        let plain = root.join("plain");
+        NativeGpuShell::from_package_root(&package).init_project(&plain, "plain").unwrap();
+        let project = std::fs::read_to_string(plain.join("project.yml")).unwrap();
+        assert!(!project.contains("{{"), "control: every placeholder is filled: {project}");
+        assert!(project.contains("- path: OrbitalSignInOff.m") && !project.contains("packages:") && !project.contains("GoogleService-Info.plist"), "control: no config, no SDK: {project}");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_reversed_client_id_is_read_from_the_plist() {
+        let plist = "<plist><dict><key>CLIENT_ID</key><string>1-a.apps.googleusercontent.com</string><key>REVERSED_CLIENT_ID</key>\n\t<string>com.googleusercontent.apps.1-a</string></dict></plist>";
+        assert_eq!(reversed_client_id(plist).as_deref(), Some("com.googleusercontent.apps.1-a"));
+        assert_eq!(reversed_client_id("<plist><dict></dict></plist>"), None, "control: no key, no scheme");
     }
 }

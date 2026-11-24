@@ -63,7 +63,9 @@ struct DataListMoleculeView: View {
                     }
                     ForEach(groups[g].items.indices, id: \.self) { i in
                         let item = groups[g].items[i]
-                        if variant == "message" {
+                        if variant == "feed" {
+                            feedRow(item.row, offset: item.offset, previous: i > 0 ? groups[g].items[i - 1].row : nil)
+                        } else if variant == "message" {
                             bubble(item.row, offset: item.offset)
                         } else {
                             row(item.row, offset: item.offset, last: g == groups.count - 1 && i == groups[g].items.count - 1)
@@ -257,6 +259,115 @@ struct DataListMoleculeView: View {
         }
         .padding(.horizontal, theme.density.spacing.space4)
         .verificationContainer(VerificationIds.row(id))
+    }
+
+    private func feedTime(_ row: AnyCodable, _ stamp: AnyCodable?) -> Double? {
+        guard let stamp = stamp, let raw = AtomKit.scalar(AtomKit.cell(row, stamp.string("name"))), !raw.isEmpty else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
+        let day = DateFormatter()
+        day.dateFormat = "yyyy-MM-dd"
+        guard let date = fractional.date(from: raw) ?? plain.date(from: raw) ?? day.date(from: raw) else { return nil }
+        return date.timeIntervalSince1970
+    }
+
+    private func feedName(_ row: AnyCodable) -> String {
+        let sender = AtomKit.display(AtomKit.cell(row, props.string("senderField")), format: "")
+        let labelField = props.string("senderLabelField")
+        if labelField.isEmpty { return sender }
+        let label = AtomKit.display(AtomKit.cell(row, labelField), format: "")
+        return label.isEmpty ? sender : label
+    }
+
+    @ViewBuilder
+    private func feedRow(_ row: AnyCodable, offset: Int, previous: AnyCodable?) -> some View {
+        let id = AtomKit.rowKey(row, offset)
+        let senderField = props.string("senderField")
+        let contentField = (fields.first(where: { $0.string("variant") == "body" }) ?? fields.first(where: { $0.string("variant") == "h3" || $0.string("variant") == "h4" }))?.string("name") ?? ""
+        let stamp = fields.first(where: { ["date", "datetime", "time"].contains($0.string("format")) })
+        let meta = fields.filter { $0.string("name") != contentField && $0.string("name") != stamp?.string("name") }
+        let open = props.string("itemClickEvent")
+        let replyEvent = props.string("replyEvent")
+        let windowSeconds = Double(props.int("feedGroupMinutes", default: 5)) * 60
+        let continuation: Bool = {
+            guard let previous = previous, !senderField.isEmpty else { return false }
+            guard AtomKit.display(AtomKit.cell(row, senderField), format: "") == AtomKit.display(AtomKit.cell(previous, senderField), format: "") else { return false }
+            guard let now = feedTime(row, stamp), let before = feedTime(previous, stamp) else { return false }
+            return now - before >= 0 && now - before <= windowSeconds
+        }()
+        let stampText = stamp.flatMap { AtomKit.blank(AtomKit.cell(row, $0.string("name"))) ? nil : AtomKit.display(AtomKit.cell(row, $0.string("name")), format: $0.string("format")) }
+        let avatarField = props.string("senderAvatarField")
+        let photo = avatarField.isEmpty ? "" : AtomKit.display(AtomKit.cell(row, avatarField), format: "")
+        let replyField = props.string("replyCountField")
+        let replyCount = replyField.isEmpty ? 0 : Int(Double(AtomKit.scalar(AtomKit.cell(row, replyField)) ?? "") ?? 0)
+        let repliersField = props.string("repliersField")
+        let repliers = repliersField.isEmpty ? [] : (AtomKit.cell(row, repliersField)?.arrayValue ?? []).compactMap { AtomKit.scalar($0) }
+        let split = AtomRowActions.split(actions(for: row), inlineLimit: props.dictValue?["maxInlineActions"]?.intValue)
+        let shownActions = split.inline + split.menu
+        HStack(alignment: .top, spacing: theme.density.spacing.space3) {
+            VStack {
+                if !continuation {
+                    AvatarRenderer(props: ["name": .string(feedName(row)), "src": .string(photo), "size": "md"], modifier: nil, onEvent: onEvent)
+                }
+            }
+            .frame(width: theme.density.spacing.space10, alignment: .center)
+            VStack(alignment: .leading, spacing: theme.density.spacing.space1) {
+                if !continuation {
+                    HStack(alignment: .firstTextBaseline, spacing: theme.density.spacing.space2) {
+                        AtomKit.typo(feedName(row), "small", weight: "semibold", onEvent: onEvent)
+                        if let stampText = stampText {
+                            AtomKit.typo(stampText, "caption", color: "secondary", onEvent: onEvent)
+                        }
+                    }
+                }
+                AtomKit.typo(AtomKit.display(AtomKit.cell(row, contentField), format: ""), "body1", onEvent: onEvent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture { if !open.isEmpty { onEvent(open, eventEnvelope(props, payload: AtomKit.rowPayload(row))) } }
+                    .accessibilityAddTraits(open.isEmpty ? [] : .isButton)
+                feedMeta(row, meta)
+                if replyCount > 0 {
+                    Button {
+                        if !replyEvent.isEmpty { onEvent(replyEvent, eventEnvelope(props, payload: AtomKit.rowPayload(row))) }
+                    } label: {
+                        HStack(spacing: theme.density.spacing.space2) {
+                            ForEach(repliers.indices, id: \.self) { index in
+                                AvatarRenderer(props: ["name": .string(repliers[index]), "size": "xs"], modifier: nil, onEvent: onEvent)
+                            }
+                            AtomKit.typo(replyCount == 1 ? "1 reply" : "\(replyCount) replies", "caption", color: "primary", weight: "semibold", onEvent: onEvent)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, theme.density.spacing.space4)
+        .padding(.top, continuation ? theme.density.spacing.space1 : theme.density.spacing.space2)
+        .padding(.bottom, theme.density.spacing.space1)
+        .overlay(alignment: .topTrailing) {
+            if !shownActions.isEmpty {
+                AtomRowActions(owner: props, row: row, inline: [], menu: shownActions, onEvent: onEvent)
+                    .padding(.horizontal, theme.density.spacing.space4)
+            }
+        }
+        .verificationContainer(VerificationIds.row(id))
+    }
+
+    @ViewBuilder
+    private func feedMeta(_ row: AnyCodable, _ meta: [AnyCodable]) -> some View {
+        let badges = meta.filter { $0.string("variant") == "badge" }
+        let captions = meta.filter { $0.string("variant") != "badge" }
+        if !badges.isEmpty || !captions.isEmpty {
+            HStack(spacing: theme.density.spacing.space2) {
+                AtomFieldBadges(row: row, fields: badges, relations: relations, onEvent: onEvent)
+                ForEach(captions.indices, id: \.self) { index in
+                    let text = AtomKit.fieldText(row, captions[index], relations: relations)
+                    if !text.isEmpty { AtomKit.typo(text, "caption", color: "secondary", onEvent: onEvent) }
+                }
+            }
+        }
     }
 }
 

@@ -41,9 +41,9 @@ pub extern "C" fn orbital_native_ios_main() {
         &orbital_core::schema::parse_schema(&program).expect("bundled program.orb"),
     );
     match host {
-        NativeHost::Embedded => orbital_client_dioxus::native::start(&program, css, "Native App"),
+        NativeHost::Embedded => orbital_client_dioxus::native::start(&program, None, css, "Native App"),
         NativeHost::Server { backend_url } => {
-            orbital_client_dioxus::native::start_server(&program, &backend_url, css, "Native App")
+            orbital_client_dioxus::native::start_server(&program, &backend_url, None, css, "Native App")
         }
     }
     .expect("native GPU mount");
