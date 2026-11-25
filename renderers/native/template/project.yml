@@ -28,6 +28,7 @@ name: {{APP_NAME}}
 {{SIGN_IN_DEPENDENCIES}}    settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: {{APP_PACKAGE}}
+        CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_DEBUG_DYLIB: "NO"
         "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64

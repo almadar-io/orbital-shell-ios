@@ -312,7 +312,7 @@ pub(crate) fn build_replacements(project_name: &str) -> std::collections::HashMa
     let mut map = std::collections::HashMap::new();
     let package = to_package_name(project_name);
     let class_name = split_to_pascal_case(&package);
-    let bundle_id = format!("com.orbital.{}", package);
+    let bundle_id = format!("com.orbital.{}", bundle_segment(&package));
     map.insert("{{APP_NAME}}", package.clone());
     map.insert("{{APP_PACKAGE}}", bundle_id);
     map.insert("{{APP_CLASS_NAME}}", class_name);
@@ -392,6 +392,11 @@ fn collect_dirs(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), ShellError> {
 /// name (`{{APP_CLASS_NAME}}`) a generated test file needs for
 /// `@testable import` — the SAME derivation `build_replacements` uses for
 /// the template's placeholder substitution, never duplicated.
+/// A bundle id holds only ASCII letters, digits, hyphens and dots; Apple's signing refuses an underscore.
+fn bundle_segment(package: &str) -> String {
+    package.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '_').map(|c| if c == '_' { '-' } else { c }).collect()
+}
+
 pub(crate) fn to_package_name(s: &str) -> String {
     s.to_lowercase()
         .replace(['-', ' '], "_")
@@ -401,6 +406,22 @@ pub(crate) fn to_package_name(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_bundle_id_is_reverse_dns_apple_signing_accepts() {
+        let valid = |id: &str| id.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-');
+        for (name, id) in [
+            ("todo-app", "com.orbital.todo-app"),
+            ("osama_site", "com.orbital.osama-site"),
+            ("My App 2", "com.orbital.my-app-2"),
+            ("café-menu", "com.orbital.caf-menu"),
+        ] {
+            let bundle = build_replacements(name)["{{APP_PACKAGE}}"].clone();
+            assert_eq!(bundle, id, "{name}");
+            assert!(valid(&bundle), "{bundle}");
+        }
+        assert_eq!(build_replacements("osama_site")["{{APP_NAME}}"], "osama_site", "control: the Xcode target name keeps its underscores");
+    }
 
     #[test]
     fn test_shell_properties() {

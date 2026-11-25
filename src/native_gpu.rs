@@ -319,7 +319,22 @@ mod tests {
         shell.init_project(&app, "todo-app").unwrap();
         let project = std::fs::read_to_string(app.join("project.yml")).unwrap();
         assert!(project.contains("name: todo_app"), "{project}");
-        assert!(project.contains("PRODUCT_BUNDLE_IDENTIFIER: com.orbital.todo_app"), "{project}");
+        assert!(project.contains("PRODUCT_BUNDLE_IDENTIFIER: com.orbital.todo-app\n"), "Apple signing refuses an underscore in a bundle id: {project}");
+        assert!(project.contains("CODE_SIGN_STYLE: Automatic\n"), "a device build is signed by the team it is given: {project}");
+        let build = std::fs::read_to_string(app.join("orb-build.sh")).unwrap();
+        let device = &build[build.find(r#"if [[ "${1:-}" == "--device" ]]; then"#).expect("a device build path")..];
+        let device = &device[..device.find("    exit 0\nfi\n").expect("the device path ends before the simulator build")];
+        for line in [
+            r#": "${ORB_IOS_TEAM:?"#,
+            r#"-destination "platform=iOS,id=${DEVICE}""#,
+            r#"DEVELOPMENT_TEAM="${ORB_IOS_TEAM}""#,
+            "-allowProvisioningUpdates -allowProvisioningDeviceRegistration",
+            r#"xcrun devicectl device install app --device "${DEVICE}""#,
+            r#"xcrun devicectl device process launch --device "${DEVICE}" --terminate-existing"#,
+        ] {
+            assert!(device.contains(line), "the device path has `{line}`: {device}");
+        }
+        assert!(!device.contains("CODE_SIGNING_ALLOWED=NO"), "a device build is signed: {device}");
         assert!(project.contains(&format!("deploymentTarget: \"{}\"", contract.min_ios)), "{project}");
         assert!(project.contains(&format!("$(PROJECT_DIR)/lib/aarch64-apple-ios-sim/{}", contract.library)), "{project}");
         assert!(!project.contains("{{"), "every placeholder is filled: {project}");
