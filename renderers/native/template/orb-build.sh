@@ -2,6 +2,7 @@
 set -euo pipefail
 
 APP_NAME="{{APP_NAME}}"
+mkdir -p lazy fonts
 xcodegen generate --spec project.yml
 DESTINATION="generic/platform=iOS Simulator"
 xcodebuild -project "${APP_NAME}.xcodeproj" -scheme "${APP_NAME}" -configuration Debug \

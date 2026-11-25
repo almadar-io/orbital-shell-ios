@@ -31,13 +31,14 @@ name: {{APP_NAME}}
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_DEBUG_DYLIB: "NO"
         "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
-        ORB_NATIVE_FRAMEWORKS: "-framework Metal -framework QuartzCore -framework Foundation -framework CoreFoundation -framework CoreGraphics -framework CoreText -framework Security -framework SystemConfiguration -framework UIKit -framework WebKit -lobjc"
+        ORB_NATIVE_FRAMEWORKS: "-framework Metal -framework QuartzCore -framework AudioToolbox -framework CoreAudio -framework AVFoundation -framework Foundation -framework CoreFoundation -framework CoreGraphics -framework CoreText -framework Security -framework SystemConfiguration -framework UIKit -framework WebKit -lobjc"
         "OTHER_LDFLAGS[sdk=iphonesimulator*]": "$(inherited) $(PROJECT_DIR)/lib/aarch64-apple-ios-sim/{{NATIVE_GPU_LIBRARY}} $(ORB_NATIVE_FRAMEWORKS)"
         "OTHER_LDFLAGS[sdk=iphoneos*]": "$(inherited) $(PROJECT_DIR)/lib/aarch64-apple-ios/{{NATIVE_GPU_LIBRARY}} $(ORB_NATIVE_FRAMEWORKS)"
     info:
       path: Info.plist
       properties:
         CFBundleDisplayName: "{{APP_TITLE}}"
+        UILaunchScreen: {}
 {{SIGN_IN_URL_TYPES}}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

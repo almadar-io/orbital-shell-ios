@@ -323,6 +323,11 @@ mod tests {
         assert!(project.contains(&format!("deploymentTarget: \"{}\"", contract.min_ios)), "{project}");
         assert!(project.contains(&format!("$(PROJECT_DIR)/lib/aarch64-apple-ios-sim/{}", contract.library)), "{project}");
         assert!(!project.contains("{{"), "every placeholder is filled: {project}");
+        assert!(project.contains("        UILaunchScreen: {}\n"), "a launch screen keeps iOS from letterboxing the app at a legacy size: {project}");
+        assert!(contract.production_feature_set.contains("native-audio"), "control: the production library plays audio");
+        for framework in ["AudioToolbox", "CoreAudio", "AVFoundation"] {
+            assert!(project.contains(&format!("-framework {framework} ")), "native-audio links {framework}: {project}");
+        }
         for target in &contract.targets {
             assert_eq!(std::fs::read(app.join("lib").join(target).join(&contract.library)).unwrap(), b"!<arch>\nlibrary");
         }
@@ -410,6 +415,9 @@ mod tests {
             assert!(project.contains(&format!("- path: {folder}\n        type: folder\n        optional: true\n        buildPhase: resources")), "{folder}: {project}");
         }
         assert!(project.contains("- path: bundle-files.json\n        buildPhase: resources"), "{project}");
+        let build = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("renderers/native/template/orb-build.sh")).unwrap();
+        let made = build.find("mkdir -p lazy fonts").expect("an app with no lazy page or font file still has both folders Xcode copies");
+        assert!(made < build.find("xcodegen generate").unwrap(), "the folders exist before the project is generated: {build}");
     }
 
     #[test]
