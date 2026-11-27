@@ -1057,6 +1057,14 @@ extension AtomKit {
         return scalar(raw.dictValue?["message"]) ?? ""
     }
 
+    /// `emptyMessage: ""` declares a list that says nothing when empty; a declared title, description or action still shows.
+    static func saysNothingWhenEmpty(_ owner: AnyCodable) -> Bool {
+        owner.dictValue?["emptyMessage"]?.stringValue == ""
+            && (owner.dictValue?["emptyTitle"]?.stringValue ?? "").isEmpty
+            && owner.dictValue?["emptyDescription"] == nil
+            && owner.dictValue?["emptyAction"] == nil
+    }
+
     static func emptyProps(_ owner: AnyCodable, fallback: String) -> AnyCodable {
         var values: [String: AnyCodable] = [:]
         if let icon = owner.dictValue?["emptyIcon"] { values["icon"] = icon }

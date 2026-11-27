@@ -31,7 +31,9 @@ struct DataListMoleculeView: View {
             AtomKit.typo(error, "body1", color: "error", align: "center", onEvent: onEvent)
                 .padding(.vertical, theme.density.spacing.space8)
         } else if shown.isEmpty {
-            EmptyStateRenderer(props: AtomKit.emptyProps(props, fallback: "No items"), modifier: nil, onEvent: onEvent)
+            if !AtomKit.saysNothingWhenEmpty(props) {
+                EmptyStateRenderer(props: AtomKit.emptyProps(props, fallback: "No items"), modifier: nil, onEvent: onEvent)
+            }
         } else {
             content(shown, remaining: all.count - shown.count)
         }
